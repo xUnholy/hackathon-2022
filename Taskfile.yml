@@ -17,3 +17,6 @@ tasks:
     desc: "initialise the management kubernetes cluster"
     cmds:
       - task: gcp:mgmt
+      - task: gcp:gen
+      - task: gcp:apply
+      - task: gcp:cni

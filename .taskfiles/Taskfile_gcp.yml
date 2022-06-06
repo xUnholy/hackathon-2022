@@ -10,45 +10,59 @@ vars:
   # them in a value to be stored in a Kubernetes Secret.
   GCP_B64ENCODED_CREDENTIALS: $( cat $(pwd)/.secrets/gcp-credentials.json | base64 | tr -d '\n' )
   # Name of the GCP datacenter location. Change this value to your desired location
-  GCP_REGION_1: "australia-southeast1"
-  GCP_REGION_2: "australia-southeast2"
+  GCP_REGION: "australia-southeast1"
   GCP_PROJECT: "hackathon-2022-352503"
   # Make sure to use same kubernetes version here as building the GCE image
   KUBERNETES_VERSION: 1.24.0
   GCP_CONTROL_PLANE_MACHINE_TYPE: n1-standard-2
   GCP_NODE_MACHINE_TYPE: n1-standard-2
-  GCP_NETWORK_NAME: <GCP_NETWORK_NAME or default>
-  CLUSTER_NAME: "<CLUSTER_NAME>"
+  GCP_NETWORK_NAME: default
+  CLUSTER_NAME: workload-cluster-01
+  # TODO: Investivate what this value should be; IE. Talos?
+  IMAGE_ID: "Ubuntu"
 
 tasks:
   # Note: Cluster API requires an existing Kubernetes cluster accessible via kubectl
   mgmt:
     desc: "initialize the management cluster"
+    env:
+      GCP_B64ENCODED_CREDENTIALS: "{{.GCP_B64ENCODED_CREDENTIALS}}"
     cmds:
       - clusterctl init --infrastructure gcp
 
+  # TODO: Consider building a template EG.
+  #   Generates a yaml file for creating workload clusters using a template from a specific URL.
+  #   clusterctl generate cluster my-cluster --from https://github.com/foo-org/foo-repository/blob/main/cluster-template.yaml
   gen:
     desc:
+    env:
+      GCP_REGION: "{{.GCP_REGION}}"
+      GCP_PROJECT: "{{.GCP_PROJECT}}"
+      KUBERNETES_VERSION: "{{.KUBERNETES_VERSION}}"
+      GCP_CONTROL_PLANE_MACHINE_TYPE: "{{.GCP_CONTROL_PLANE_MACHINE_TYPE}}"
+      GCP_NODE_MACHINE_TYPE: "{{.GCP_NODE_MACHINE_TYPE}}"
+      GCP_NETWORK_NAME: "{{.GCP_NETWORK_NAME}}"
+      CLUSTER_NAME: "{{.CLUSTER_NAME}}"
+      IMAGE_ID: "{{.IMAGE_ID}}"
     cmds:
-      - clusterctl generate cluster capi-quickstart \
-          --kubernetes-version v1.24.0 \
-          --control-plane-machine-count=3 \
-          --worker-machine-count=3 \
-          > capi-quickstart.yaml
+      - clusterctl generate cluster management-cluster --kubernetes-version=v{{.KUBERNETES_VERSION}} --control-plane-machine-count=1 --worker-machine-count=1 > management-cluster.yaml
 
   apply:
     desc:
     cmds:
-      - kubectl apply -f capi-quickstart.yaml
+      - kubectl apply -f management-cluster.yaml
 
   # TODO: Setup Cilium
   cni:
     desc: "Deploy a CNI solution"
     cmds:
-      - kubectl --kubeconfig=./capi-quickstart.kubeconfig \
+      - kubectl --kubeconfig=./management-cluster.kubeconfig \
           apply -f https://docs.projectcalico.org/v3.21/manifests/calico.yaml
 
   clean:
     desc:
     cmds:
       - kubectl delete cluster capi-quickstart
+
+# Error: value for variables [GCP_CONTROL_PLANE_MACHINE_TYPE, GCP_NETWORK_NAME, GCP_NODE_MACHINE_TYPE, GCP_PROJECT, GCP_REGION, IMAGE_ID] is not set. Please set the value using os environmen
+# clusterctl generate cluster capi-quickstart --kubernetes-version v1.24.0 --control-plane-machine-count=3 --worker-machine-count=3 > capi-quickstart.yaml
