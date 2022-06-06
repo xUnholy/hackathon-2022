@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  bootstrap:
+    desc: "Example: task core:bootstrap -- <flags>"
+    cmds:
+      - cmd: |
+          flux bootstrap github \
+            --owner="{{.GITHUB_USER}}" \
+            --repository="{{.GITHUB_REPO}}" \
+            --path=k8s/clusters/"{{.CLUSTER}}" \
+            --branch="{{.GITHUB_BRANCH}}" \
+            --network-policy=false \
+            --personal=true \
+            --private=false \
+            {{.CLI_ARGS}}
+        silent: true

@@ -1,0 +1,75 @@
+version: '3'
+
+# Resources:
+#   https://www.talos.dev/v1.1/talos-guides/install/cloud-platforms/gcp/
+
+vars:
+  # GCS instance to use - must exist!
+  GCS_BUCKET: "talos-images"
+  # GCP Region
+  REGION: "australia-southeast1"
+  TALOS_RELEASE: "v1.1.0-alpha.0"
+
+tasks:
+  upload:
+    desc: "Get specific Talos release, upload it, and register it as a usable image"
+    cmds:
+      - curl -Lo gcp-amd64.tar.gz https://github.com/siderolabs/talos/releases/download/{{.TALOS_RELEASE}}/gcp-amd64.tar.gz
+      - gsutil cp gcp-amd64.tar.gz gs://{{.GCS_BUCKET}}
+      - gcloud compute images create talos \
+          --source-uri=gs://{{.GCS_BUCKET}}/gcp-amd64.tar.gz \
+          --guest-os-features=VIRTIO_SCSI_MULTIQUEUE
+
+  # TODO: Use TF or something else to setup this networking infrastructure?
+  network:
+    desc: "Create and setup networking infrastructure"
+    cmds:
+      # Create Instance Group
+      - gcloud compute instance-groups unmanaged create talos-ig \
+          --zone {{.REGION}}-b
+      # Create port for IG
+      - gcloud compute instance-groups set-named-ports talos-ig \
+          --named-ports tcp6443:6443 \
+          --zone {{.REGION}}-b
+      # Create health check
+      - gcloud compute health-checks create tcp talos-health-check --port 6443
+      # Create backend
+      - gcloud compute backend-services create talos-be \
+          --global \
+          --protocol TCP \
+          --health-checks talos-health-check \
+          --timeout 5m \
+          --port-name tcp6443
+      # Add instance group to backend
+      - gcloud compute backend-services add-backend talos-be \
+          --global \
+          --instance-group talos-ig \
+          --instance-group-zone {{.REGION}}-b
+      # Create tcp proxy
+      - gcloud compute target-tcp-proxies create talos-tcp-proxy \
+          --backend-service talos-be \
+          --proxy-header NONE
+      # Create LB IP
+      - gcloud compute addresses create talos-lb-ip --global
+      # Forward 443 from LB IP to tcp proxy
+      - gcloud compute forwarding-rules create talos-fwd-rule \
+          --global \
+          --ports 443 \
+          --address talos-lb-ip \
+          --target-tcp-proxy talos-tcp-proxy
+      # Create firewall rule for health checks
+      - gcloud compute firewall-rules create talos-controlplane-firewall \
+          --source-ranges 130.211.0.0/22,35.191.0.0/16 \
+          --target-tags talos-controlplane \
+          --allow tcp:6443
+      # Create firewall rule to allow talosctl access
+      - gcloud compute firewall-rules create talos-controlplane-talosctl \
+        --source-ranges 0.0.0.0/0 \
+        --target-tags talos-controlplane \
+        --allow tcp:50000
+
+  config:
+    desc: ""
+    cmds:
+      - LB_PUBLIC_IP=$(gcloud compute forwarding-rules describe talos-fwd-rule --global --format json | jq -r .IPAddress)
+      - talosctl gen config talos-k8s-gcp-tutorial https://${LB_PUBLIC_IP}:443

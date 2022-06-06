@@ -1,0 +1,19 @@
+version: '3'
+
+vars:
+  # https://cluster-api.sigs.k8s.io/tasks/experimental-features/experimental-features.html
+  CLUSTER_TOPOLOGY: "true"
+
+includes:
+  gcp:
+    taskfile: ./.taskfiles/Taskfile_gcp.yml
+    optional: true
+  talos:
+    taskfile: ./.taskfiles/Taskfile_talos.yml
+    optional: true
+
+tasks:
+  init:
+    desc: "initialise the management kubernetes cluster"
+    cmds:
+      - task: gcp:mgmt

@@ -1,0 +1,54 @@
+version: '3'
+
+# Resources:
+#   https://cluster-api.sigs.k8s.io/user/quick-start.html#accessing-the-workload-cluster
+#   https://github.com/kubernetes-sigs/cluster-api-provider-gcp
+
+vars:
+  # Create the base64 encoded credentials by catting your credentials json.
+  # This command uses your environment variables and encodes
+  # them in a value to be stored in a Kubernetes Secret.
+  GCP_B64ENCODED_CREDENTIALS: $( cat $(pwd)/.secrets/gcp-credentials.json | base64 | tr -d '\n' )
+  # Name of the GCP datacenter location. Change this value to your desired location
+  GCP_REGION_1: "australia-southeast1"
+  GCP_REGION_2: "australia-southeast2"
+  GCP_PROJECT: "hackathon-2022-352503"
+  # Make sure to use same kubernetes version here as building the GCE image
+  KUBERNETES_VERSION: 1.24.0
+  GCP_CONTROL_PLANE_MACHINE_TYPE: n1-standard-2
+  GCP_NODE_MACHINE_TYPE: n1-standard-2
+  GCP_NETWORK_NAME: <GCP_NETWORK_NAME or default>
+  CLUSTER_NAME: "<CLUSTER_NAME>"
+
+tasks:
+  # Note: Cluster API requires an existing Kubernetes cluster accessible via kubectl
+  mgmt:
+    desc: "initialize the management cluster"
+    cmds:
+      - clusterctl init --infrastructure gcp
+
+  gen:
+    desc:
+    cmds:
+      - clusterctl generate cluster capi-quickstart \
+          --kubernetes-version v1.24.0 \
+          --control-plane-machine-count=3 \
+          --worker-machine-count=3 \
+          > capi-quickstart.yaml
+
+  apply:
+    desc:
+    cmds:
+      - kubectl apply -f capi-quickstart.yaml
+
+  # TODO: Setup Cilium
+  cni:
+    desc: "Deploy a CNI solution"
+    cmds:
+      - kubectl --kubeconfig=./capi-quickstart.kubeconfig \
+          apply -f https://docs.projectcalico.org/v3.21/manifests/calico.yaml
+
+  clean:
+    desc:
+    cmds:
+      - kubectl delete cluster capi-quickstart

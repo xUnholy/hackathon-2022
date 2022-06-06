@@ -1,0 +1,5 @@
+# Ignore the following folders
+.secrets/
+
+# Ignore the following files
+*.tar.gz
