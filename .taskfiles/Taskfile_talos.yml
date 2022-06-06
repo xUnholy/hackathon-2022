@@ -1,0 +1,18 @@
+version: '3'
+
+# Resources:
+#   https://www.talos.dev/v1.1/talos-guides/install/cloud-platforms/gcp/
+
+vars:
+  # GCS instance to use - must exist! Also GCS bucket name needs to be globally unique
+  GCS_BUCKET: "talos-images-01"
+  TALOS_RELEASE: "v1.0.6"
+
+tasks:
+  image:
+    desc: "Get specific Talos release, upload it, and register it as a usable image"
+    cmds:
+      - curl -Lo gcp-amd64-{{.TALOS_RELEASE}}.tar.gz https://github.com/siderolabs/talos/releases/download/{{.TALOS_RELEASE}}/gcp-amd64.tar.gz
+      - gsutil cp gcp-amd64-{{.TALOS_RELEASE}}.tar.gz gs://{{.GCS_BUCKET}}
+      # TODO: Image name should be tagged with version / release
+      - gcloud compute images create talos-v1-0-6 --source-uri=gs://{{.GCS_BUCKET}}/gcp-amd64-{{.TALOS_RELEASE}}.tar.gz --guest-os-features=VIRTIO_SCSI_MULTIQUEUE

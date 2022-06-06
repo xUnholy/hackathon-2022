@@ -1,0 +1,181 @@
+## Cluster configs
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+        - 192.168.0.0/16
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: AWSCluster
+    name: ${CLUSTER_NAME}
+  controlPlaneRef:
+    kind: TalosControlPlane
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+    name: ${CLUSTER_NAME}-controlplane
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AWSCluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  region: ${AWS_REGION}
+  sshKeyName: ${AWS_SSH_KEY_NAME}
+  network:
+    vpc:
+      id: ${AWS_VPC_ID}
+    subnets:
+      - id: ${AWS_SUBNET}
+        isPublic: true
+        availabilityZone: ${AWS_SUBNET_AZ}
+  controlPlaneLoadBalancer:
+    subnets:
+      - ${AWS_SUBNET}
+---
+## Control plane configs
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AWSMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-controlplane
+spec:
+  template:
+    spec:
+      cloudInit:
+        insecureSkipSecretsManager: true
+      instanceType: ${AWS_CONTROL_PLANE_MACHINE_TYPE}
+      rootVolume:
+        size: ${AWS_CONTROL_PLANE_VOL_SIZE}
+      sshKeyName: ${AWS_SSH_KEY_NAME}
+      ami:
+        id: ${AWS_CONTROL_PLANE_AMI_ID}
+      additionalSecurityGroups: ${AWS_CONTROL_PLANE_ADDL_SEC_GROUPS}
+      publicIP: true
+      iamInstanceProfile: ${AWS_CONTROL_PLANE_IAM_PROFILE}
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+kind: TalosControlPlane
+metadata:
+  name: ${CLUSTER_NAME}-controlplane
+spec:
+  version: v${KUBERNETES_VERSION}
+  replicas: ${CONTROL_PLANE_MACHINE_COUNT}
+  infrastructureTemplate:
+    kind: AWSMachineTemplate
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    name: ${CLUSTER_NAME}-controlplane
+  controlPlaneConfig:
+    controlplane:
+      generateType: controlplane
+      talosVersion: ${TALOS_VERSION}
+      configPatches:
+        # TODO: replace with cilium - should this be in init or controlPlane
+        # https://github.com/siderolabs/cluster-api-templates/tree/main/aws#assumptions-and-caveats
+        - op: add
+          path: /cluster/network/cni
+          value:
+            name: custom
+            urls:
+              - https://docs.projectcalico.org/${CALICO_VERSION}/manifests/calico.yaml
+        - op: add
+          path: /machine/kubelet/registerWithFQDN
+          value: true
+        - op: add
+          path: /cluster/externalCloudProvider
+          value:
+            enabled: true
+            manifests:
+              - https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/${AWS_CLOUD_PROVIDER_VERSION}/manifests/rbac.yaml
+              - https://raw.githubusercontent.com/kubernetes/cloud-provider-aws/${AWS_CLOUD_PROVIDER_VERSION}/manifests/aws-cloud-controller-manager-daemonset.yaml
+---
+## Worker deployment configs
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+kind: TalosConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-workers
+spec:
+  template:
+    spec:
+      generateType: join
+      talosVersion: ${TALOS_VERSION}
+      configPatches:
+        - op: add
+          path: /machine/kubelet/registerWithFQDN
+          value: true
+        - op: add
+          path: /cluster/externalCloudProvider
+          value:
+            enabled: true
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+    nodepool: nodepool-a
+  name: ${CLUSTER_NAME}-workers
+spec:
+  clusterName: ${CLUSTER_NAME}
+  replicas: ${WORKER_MACHINE_COUNT}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+      nodepool: nodepool-a
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+        nodepool: nodepool-a
+    spec:
+      clusterName: ${CLUSTER_NAME}
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+          kind: TalosConfigTemplate
+          name: ${CLUSTER_NAME}-workers
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: AWSMachineTemplate
+        name: ${CLUSTER_NAME}-workers
+      version: ${KUBERNETES_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: AWSMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-workers
+spec:
+  template:
+    spec:
+      cloudInit:
+        insecureSkipSecretsManager: true
+      instanceType: ${AWS_NODE_MACHINE_TYPE}
+      rootVolume:
+        size: ${AWS_NODE_VOL_SIZE}
+      sshKeyName: ${AWS_SSH_KEY_NAME}
+      ami:
+        id: ${AWS_NODE_AMI_ID}
+      additionalSecurityGroups: ${AWS_NODE_ADDL_SEC_GROUPS}
+      publicIP: true
+      iamInstanceProfile: ${AWS_NODE_IAM_PROFILE}
+---
+## Health check for workers
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineHealthCheck
+metadata:
+  name: ${CLUSTER_NAME}-worker-hc
+spec:
+  clusterName: ${CLUSTER_NAME}
+  maxUnhealthy: 40%
+  nodeStartupTimeout: 20m
+  selector:
+    matchLabels:
+      nodepool: nodepool-a
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 300s
+    - type: Ready
+      status: "False"
+      timeout: 300s

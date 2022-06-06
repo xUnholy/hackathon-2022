@@ -1,0 +1,25 @@
+version: '3'
+
+vars:
+  # https://cluster-api.sigs.k8s.io/tasks/experimental-features/experimental-features.html
+
+
+includes:
+  core:
+    taskfile: ./.taskfiles/Taskfile_core.yml
+    optional: true
+  flux:
+    taskfile: ./.taskfiles/Taskfile_flux.yml
+    optional: true
+  hack:
+    taskfile: ./.taskfiles/Taskfile_gcp_talos.yml
+    optional: true
+  talos:
+    taskfile: ./.taskfiles/Taskfile_talos.yml
+    optional: true
+
+tasks:
+  init:
+    desc: "initialise the management kubernetes cluster"
+    cmds:
+      - task: hack:mgmt

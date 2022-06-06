@@ -1,0 +1,157 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: cluster-01
+  namespace: cacppt-system
+spec:
+  clusterNetwork:
+    pods:
+      cidrBlocks:
+      - 10.244.0.0/16
+  controlPlaneRef:
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+    kind: TalosControlPlane
+    name: cluster-01-controlplane
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: GCPCluster
+    name: cluster-01
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: GCPCluster
+metadata:
+  name: cluster-01
+  namespace: cacppt-system
+spec:
+  network:
+    name: default
+  project: rising-capsule-353505
+  region: us-central1
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+kind: TalosControlPlane
+metadata:
+  name: cluster-01-controlplane
+  namespace: cacppt-system
+spec:
+  controlPlaneConfig:
+    controlplane:
+      generateType: controlplane
+      talosVersion: v1.0.6
+    init:
+      configPatches:
+      - op: replace
+        path: /cluster/proxy/disabled
+        value: true
+      - op: replace
+        path: /cluster/network/cni
+        value:
+          name: custom
+          urls:
+          - https://raw.githubusercontent.com/xunholy/cluster-api/master/k8s/clusters/cluster-01/cni.yaml
+      generateType: init
+  infrastructureTemplate:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: GCPMachineTemplate
+    name: cluster-01-controlplane
+  replicas: 1
+  version: v1.23.7
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: GCPMachineTemplate
+metadata:
+  name: cluster-01-controlplane
+  namespace: cacppt-system
+spec:
+  template:
+    spec:
+      image: projects/rising-capsule-353505/global/images/talos-v1-0-6
+      instanceType: n1-standard-2
+      publicIP: true
+      rootDeviceSize: 50
+      serviceAccounts:
+        email: cluster-api@rising-capsule-353505.iam.gserviceaccount.com
+        scopes:
+        - https://www.googleapis.com/auth/compute
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: cluster-01
+    nodepool: nodepool-a
+  name: cluster-01-workers
+  namespace: cacppt-system
+spec:
+  clusterName: cluster-01
+  replicas: 1
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: cluster-01
+      nodepool: nodepool-a
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: cluster-01
+        nodepool: nodepool-a
+    spec:
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+          kind: TalosConfigTemplate
+          name: cluster-01-workers
+      clusterName: cluster-01
+      failureDomain: us-central1-a
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: GCPMachineTemplate
+        name: cluster-01-workers
+      version: 1.23.7
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: GCPMachineTemplate
+metadata:
+  name: cluster-01-workers
+  namespace: cacppt-system
+spec:
+  template:
+    spec:
+      image: projects/rising-capsule-353505/global/images/talos-v1-0-6
+      instanceType: n1-standard-2
+      publicIP: true
+      rootDeviceSize: 50
+      serviceAccounts:
+        email: cluster-api@rising-capsule-353505.iam.gserviceaccount.com
+        scopes:
+        - https://www.googleapis.com/auth/compute
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+kind: TalosConfigTemplate
+metadata:
+  name: cluster-01-workers
+  namespace: cacppt-system
+spec:
+  template:
+    spec:
+      generateType: join
+      talosVersion: v1.0.6
+---
+apiVersion: cluster.x-k8s.io/v1alpha4
+kind: MachineHealthCheck
+metadata:
+  name: cluster-01-worker-hc
+  namespace: cacppt-system
+spec:
+  clusterName: cluster-01
+  maxUnhealthy: 40%
+  nodeStartupTimeout: 20m
+  selector:
+    matchLabels:
+      nodepool: nodepool-a
+  unhealthyConditions:
+  - status: Unknown
+    timeout: 300s
+    type: Ready
+  - status: "False"
+    timeout: 300s
+    type: Ready

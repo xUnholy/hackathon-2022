@@ -1,0 +1,11 @@
+## Used by Fluxv2 Source Controller https://toolkit.fluxcd.io/components/source/gitrepositories/#excluding-files
+
+# Exclude all by default
+/*
+
+# Include the following explicit folder(s)
+!/k8s
+
+# Exclude sub-foler(s) and file(s) - Temporary until Pivoting management cluster is automated and done before flux is bootstrapped
+/k8s/clusters/**/cluster.yaml
+/k8s/clusters/**/cni.yaml

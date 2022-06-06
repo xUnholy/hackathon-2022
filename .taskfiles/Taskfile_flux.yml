@@ -1,0 +1,23 @@
+version: '3'
+
+vars:
+  CLUSTER_NAME: cluster-00
+  GITHUB_USER: xunholy
+  GITHUB_REPO: hackathon-2022
+  GITHUB_BRANCH: master
+
+tasks:
+  bootstrap:
+    desc: "Example: task flux:bootstrap -- <flags>"
+    cmds:
+      - cmd: |
+          flux bootstrap github \
+            --owner="{{.GITHUB_USER}}" \
+            --repository="{{.GITHUB_REPO}}" \
+            --path=k8s/clusters/"{{.CLUSTER_NAME}}" \
+            --branch="{{.GITHUB_BRANCH}}" \
+            --network-policy=false \
+            --personal=true \
+            --private=false \
+            {{.CLI_ARGS}}
+        silent: true

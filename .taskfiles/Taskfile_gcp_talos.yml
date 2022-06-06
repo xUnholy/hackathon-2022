@@ -1,0 +1,93 @@
+version: '3'
+
+# Resources:
+#   https://cluster-api.sigs.k8s.io/user/quick-start.html#accessing-the-workload-cluster
+#   https://github.com/kubernetes-sigs/cluster-api-provider-gcp
+
+env:
+  # Create the base64 encoded credentials by catting your credentials json.
+  # This command uses your environment variables and encodes
+  # them in a value to be stored in a Kubernetes Secret.
+  GCP_B64ENCODED_CREDENTIALS: $( cat $(pwd)/.secrets/gcp-credentials-cluster-api.json | base64 | tr -d '\n' )
+
+  CILIUM_VERSION: 1.11.5
+  CLUSTER_API_VERSION: 1.1.4
+  # Make sure to use same kubernetes version here as building the GCE image
+  KUBERNETES_VERSION: 1.23.7
+  TALOS_VERSION: v1.0.6
+
+  # Cluster Default Variables
+  CLUSTER_NAME: cluster-01
+  GCP_PROJECT: "rising-capsule-353505"
+  GCP_REGION: "us-central1"
+  GCP_NETWORK: default
+  GCP_VM_SVC_ACCOUNT: cluster-api@{{.GCP_PROJECT}}.iam.gserviceaccount.com
+
+  # Control Plane Default Variables
+  CONTROL_PLANE_MACHINE_COUNT: 1
+  GCP_CONTROL_PLANE_MACHINE_TYPE: n1-standard-2
+  GCP_CONTROL_PLANE_VOL_SIZE: 50
+  GCP_CONTROL_PLANE_IMAGE_ID: projects/{{.GCP_PROJECT}}/global/images/talos-v1-0-6
+
+  ## Node Default Variables
+  WORKER_MACHINE_COUNT: 1
+  GCP_NODE_MACHINE_TYPE: n1-standard-2
+  GCP_NODE_VOL_SIZE: 50
+  GCP_NODE_IMAGE_ID: projects/{{.GCP_PROJECT}}/global/images/talos-v1-0-6
+
+  TEMPLATE_TYPE: standard
+
+tasks:
+  test:
+    cmds:
+      - echo {{.GCP_NODE_IMAGE_ID}}
+
+  # Note: Cluster API requires an existing Kubernetes cluster accessible via kubectl
+  mgmt:
+    desc: "initialize the management cluster"
+    env:
+      GCP_B64ENCODED_CREDENTIALS: "{{.GCP_B64ENCODED_CREDENTIALS}}"
+    cmds:
+      # TODO: Version control each element to avoid skew on versions
+      - clusterctl init --core cluster-api:v{{.CLUSTER_API_VERSION}} --infrastructure gcp --control-plane "talos" --bootstrap "talos" --config hack/clusterctl.yaml
+      - gcloud auth activate-service-account --key-file $(pwd)/.secrets/gcp-credentials.json
+
+  gen:
+    desc:
+    cmds:
+      - mkdir -p k8s/clusters/{{.CLUSTER_NAME}}
+      # TODO: update template CNI to be a template and move hydrated values to k8s/clusters/xyz/ dir as this will contain cluster unique values with cluster-mesh
+      - clusterctl generate cluster {{.CLUSTER_NAME}} --from https://github.com/xUnholy/cluster-api/blob/master/templates/gcp/{{.TEMPLATE_TYPE}}/template.yaml > k8s/clusters/{{.CLUSTER_NAME}}/cluster.yaml
+      - task: gen-cni
+
+  # Only to be used when testing local template changes
+  gen-local:
+    cmds:
+      - mkdir -p k8s/clusters/{{.CLUSTER_NAME}}
+      - clusterctl generate cluster {{.CLUSTER_NAME}} --from templates/gcp/{{.TEMPLATE_TYPE}}/template.yaml > k8s/clusters/{{.CLUSTER_NAME}}/cluster.yaml
+      - task: gen-cni-local
+
+  apply:
+    desc:
+    cmds:
+      - kubectl apply -f k8s/clusters/{{.CLUSTER_NAME}}/cluster.yaml
+
+  kubeconfig:
+    cmds:
+      - clusterctl get kubeconfig {{.CLUSTER_NAME}}
+
+  clean:
+    desc:
+    cmds:
+      - kubectl delete cluster {{.CLUSTER_NAME}}
+
+  gen-cni:
+    cmds:
+      - helm repo add cilium https://helm.cilium.io/ --force-update
+      - helm template cilium cilium/cilium --version {{.CILIUM_VERSION}} --namespace=kube-system --values=https://github.com/xUnholy/cluster-api/blob/master/templates/gcp/{{.TEMPLATE_TYPE}}/integrations/cilium/values.yaml --dry-run > k8s/clusters/{{.CLUSTER_NAME}}/cni.yaml
+
+  # TODO: Remove local and combine with existing and allow override value to determine where the value should be retrieved
+  gen-cni-local:
+    cmds:
+      - helm repo add cilium https://helm.cilium.io/ --force-update
+      - helm template cilium cilium/cilium --version {{.CILIUM_VERSION}} --namespace=kube-system --values=templates/gcp/{{.TEMPLATE_TYPE}}/integrations/cilium/values.yaml --dry-run > k8s/clusters/{{.CLUSTER_NAME}}/cni.yaml

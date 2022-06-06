@@ -1,0 +1,23 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: istiod
+  namespace: istio-system
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: istiod
+      version: 1.13.3
+      sourceRef:
+        kind: HelmRepository
+        name: istio-charts
+        namespace: flux-system
+      interval: 10m
+  install:
+    createNamespace: true
+  values:
+    meshConfig:
+      accessLogFile: /dev/stdout
+      trustDomain: cluster.local
