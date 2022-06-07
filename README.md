@@ -12,8 +12,8 @@ Install all the tools required.
 
 [clusterapi](https://cluster-api.sigs.k8s.io/user/quick-start.html#install-clusterctl)
 
-[talosctl]()
+[talosctl](https://www.talos.dev/v1.0/introduction/getting-started/#talosctl)
 
-[gcloud]()
+[gcloud](https://cloud.google.com/sdk/docs/install  )
 
-[yq]()
+[yq](https://github.com/mikefarah/yq#install)
