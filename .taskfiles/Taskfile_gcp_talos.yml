@@ -1,0 +1,75 @@
+version: '3'
+
+# Resources:
+#   https://cluster-api.sigs.k8s.io/user/quick-start.html#accessing-the-workload-cluster
+#   https://github.com/kubernetes-sigs/cluster-api-provider-gcp
+
+env:
+  # Create the base64 encoded credentials by catting your credentials json.
+  # This command uses your environment variables and encodes
+  # them in a value to be stored in a Kubernetes Secret.
+  GCP_B64ENCODED_CREDENTIALS: $( cat $(pwd)/.secrets/gcp-credentials.json | base64 | tr -d '\n' )
+
+  # Make sure to use same kubernetes version here as building the GCE image
+  KUBERNETES_VERSION: 1.24.0
+  TALOS_VERSION: v1.0.5
+
+  # Cluster Default Variables
+  CLUSTER_NAME: workload-cluster-01
+  GCP_PROJECT: "hackathon-2022-352503"
+  GCP_REGION: "australia-southeast1"
+  GCP_NETWORK: default
+  GCP_VM_SVC_ACCOUNT: default@hackathon-2022-352503.iam.gserviceaccount.com
+
+  # Control Plane Default Variables
+  CONTROL_PLANE_MACHINE_COUNT: 1
+  GCP_CONTROL_PLANE_MACHINE_TYPE: n1-standard-2
+  GCP_CONTROL_PLANE_VOL_SIZE: 50
+  GCP_CONTROL_PLANE_IMAGE_ID: projects/{{.GCP_PROJECT}}/global/images/talos
+
+  ## Node Default Variables
+  WORKER_MACHINE_COUNT: 1
+  GCP_NODE_MACHINE_TYPE: n1-standard-2
+  GCP_NODE_VOL_SIZE: 50
+  GCP_NODE_IMAGE_ID: projects/{{.GCP_PROJECT}}/global/images/talos
+
+tasks:
+  test:
+    cmds:
+      - echo {{.GCP_NODE_IMAGE_ID}}
+
+  # Note: Cluster API requires an existing Kubernetes cluster accessible via kubectl
+  mgmt:
+    desc: "initialize the management cluster"
+    env:
+      GCP_B64ENCODED_CREDENTIALS: "{{.GCP_B64ENCODED_CREDENTIALS}}"
+    cmds:
+      - clusterctl init --infrastructure gcp --control-plane "talos" --bootstrap "talos"
+      # TODO: Version control core
+      # - clusterctl init --core cluster-api:v1.1.4 --infrastructure gcp --control-plane "talos" --bootstrap "talos"
+      - gcloud auth activate-service-account --key-file $(pwd)/.secrets/gcp-credentials.json
+
+  gen:
+    desc:
+    cmds:
+      # - clusterctl generate cluster management-cluster --kubernetes-version=v{{.KUBERNETES_VERSION}} --control-plane-machine-count=1 --worker-machine-count=1 > management-cluster.yaml
+      - clusterctl generate cluster cluster-01 --from https://github.com/talos-systems/cluster-api-templates/blob/v1beta1/gcp/standard/standard.yaml > cluster-01.yaml
+
+  apply:
+    desc:
+    cmds:
+      - kubectl apply -f cluster-01.yaml
+
+  # TODO: Setup Cilium
+  cni:
+    desc: "Deploy a CNI solution"
+    cmds:
+      - kubectl --kubeconfig=./management-cluster.kubeconfig apply -f https://docs.projectcalico.org/v3.21/manifests/calico.yaml
+
+  clean:
+    desc:
+    cmds:
+      - kubectl delete cluster cluster-01
+
+# Error: value for variables [GCP_CONTROL_PLANE_MACHINE_TYPE, GCP_NETWORK_NAME, GCP_NODE_MACHINE_TYPE, GCP_PROJECT, GCP_REGION, IMAGE_ID] is not set. Please set the value using os environmen
+# clusterctl generate cluster capi-quickstart --kubernetes-version v1.24.0 --control-plane-machine-count=3 --worker-machine-count=3 > capi-quickstart.yaml

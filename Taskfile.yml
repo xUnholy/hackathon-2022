@@ -11,6 +11,9 @@ includes:
   talos:
     taskfile: ./.taskfiles/Taskfile_talos.yml
     optional: true
+  hack:
+    taskfile: ./.taskfiles/Taskfile_gcp_talos.yml
+    optional: true
 
 tasks:
   init:
