@@ -1,0 +1,28 @@
+FROM golang:alpine
+
+ARG PLATFORM_ARCH
+ARG APP_DIR
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=$PLATFORM_ARCH \
+    GOFLAGS=-mod=vendor
+# Move to working directory /build
+WORKDIR /build
+# Copy the code into the container
+COPY . .
+# Download dependencies into vendor
+RUN go mod vendor
+# Build the application
+RUN CGO_ENABLED=0 go build -mod=vendor -ldflags="-w -s" -o main ./$APP_DIR/*.go
+# Move to /dist directory as the place for resulting binary folder
+WORKDIR /myapp
+# Copy binary from build to main folder
+RUN cp /build/main .
+RUN mkdir static
+RUN cp -r /build/$APP_DIR/static .
+RUN cp -r /build/$APP_DIR/templates .
+
+
+# Command to run when starting the container
+CMD ["/myapp/main"]
