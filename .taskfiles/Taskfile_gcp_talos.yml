@@ -50,7 +50,7 @@ tasks:
     cmds:
       # TODO: Version control each element to avoid skew on versions
       - clusterctl init --core cluster-api:v{{.CLUSTER_API_VERSION}} --infrastructure gcp --control-plane "talos" --bootstrap "talos" --config hack/clusterctl.yaml
-      - gcloud auth activate-service-account --key-file $(pwd)/.secrets/gcp-credentials.json
+      - gcloud auth activate-service-account --key-file $(pwd)/.secrets/gcp-credentials-cluster-api.json
 
   gen:
     desc:
