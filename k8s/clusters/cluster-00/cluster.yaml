@@ -2,7 +2,7 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: cluster-00
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   clusterNetwork:
     pods:
@@ -21,7 +21,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPCluster
 metadata:
   name: cluster-00
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   network:
     name: default
@@ -32,7 +32,7 @@ apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
 kind: TalosControlPlane
 metadata:
   name: cluster-00-controlplane
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   controlPlaneConfig:
     controlplane:
@@ -59,7 +59,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPMachineTemplate
 metadata:
   name: cluster-00-controlplane
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   template:
     spec:
@@ -79,7 +79,7 @@ metadata:
     cluster.x-k8s.io/cluster-name: cluster-00
     nodepool: nodepool-a
   name: cluster-00-workers
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   clusterName: cluster-00
   replicas: 1
@@ -117,7 +117,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPMachineTemplate
 metadata:
   name: cluster-00-workers
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   template:
     spec:
@@ -134,7 +134,7 @@ apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
 kind: TalosConfigTemplate
 metadata:
   name: cluster-00-workers
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   template:
     spec:
@@ -145,7 +145,7 @@ apiVersion: cluster.x-k8s.io/v1alpha4
 kind: MachineHealthCheck
 metadata:
   name: cluster-00-worker-hc
-  namespace: flux-system
+  namespace: cacppt-system
 spec:
   clusterName: cluster-00
   maxUnhealthy: 40%

@@ -4,31 +4,34 @@ set -eou pipefail
 
 source ./hack/e2e.sh
 
-export CAPI_VERSION="${CAPI_VERSION:-1.1.3}"
-export CAPA_VERSION="${CAPA_VERSION:-1.2.0}"
-export CAPG_VERSION="${CAPG_VERSION:-1.0.0}"
+export CAPI_VERSION="${CAPI_VERSION:-1.1.4}"
+export CAPA_VERSION="${CAPA_VERSION:-1.4.1}"
+export CAPG_VERSION="${CAPG_VERSION:-1.1.0}"
 
-# We need to override this here since e2e.sh will set it to ${TMP}/capi/kubeconfig.
-export KUBECONFIG="/tmp/e2e/docker/kubeconfig"
 
 # CABPT
 export CABPT_NS="cabpt-system"
 
-# Install envsubst
-apk add --no-cache gettext
+trap 'failure' ERR
+
+failure() {
+  clusterctl delete --all
+}
+
 
 # Env vars for cloud accounts
 set +x
-export GCP_B64ENCODED_CREDENTIALS=${GCE_SVC_ACCT}
-export AWS_B64ENCODED_CREDENTIALS=${AWS_SVC_ACCT}
+export GCP_B64ENCODED_CREDENTIALS=$( cat $(pwd)/.secrets/gcp-credentials-cluster-api.json | base64 | tr -d '\n' )
 set -x
 
-${CLUSTERCTL} init \
+clusterctl init \
     --config hack/clusterctl.yaml \
     --core "cluster-api:v${CAPI_VERSION}" \
     --control-plane "talos" \
-    --infrastructure "aws:v${CAPA_VERSION},gcp:v${CAPG_VERSION}" \
+    --infrastructure "gcp:v${CAPG_VERSION}"  \
     --bootstrap "talos"
+
+gcloud auth activate-service-account --key-file "$(pwd)/.secrets/gcp-credentials-cluster-api.json"
 
 # Wait for the talosconfig
 timeout=$(($(date +%s) + ${TIMEOUT}))
@@ -37,3 +40,4 @@ until ${KUBECTL} wait --timeout=1s --for=condition=Ready -n ${CABPT_NS} pods --a
   echo 'Waiting to CABPT pod to be available...'
   sleep 5
 done
+
