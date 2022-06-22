@@ -49,9 +49,10 @@ The following must be done to setup your GCP project.
 1. Create GCP project
 2. Enable required APIs (*compute engine)
 3. Create `cluster-api` GSA and provide it with `role/Owner` (*scope could be smaller but for simplicity Owner is sufficent)
-4. Create GCS bucket called `talos-images-01` - name needs to be globally unique so a UID suffix would be best
-5. Create the VM images using `task talos:image`
-6. Update FW rules to include TCP ports for `6443,50000` which is used by Talos to connect and bootstrap nodes (* see Limitation section about I/O Timeouts)
+4. Export GSA token locally under .secrets/*
+5. Create GCS bucket called `talos-images-01` - name needs to be globally unique so a UID suffix would be best
+6. Create the VM images using `task talos:image`
+7. Update FW rules to include TCP ports for `6443,50000` which is used by Talos to connect and bootstrap nodes (* see Limitation section about I/O Timeouts)
 
 WIP
 

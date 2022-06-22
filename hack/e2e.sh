@@ -112,50 +112,6 @@ function create_cluster_capi {
   done
 }
 
-function run_talos_integration_test {
-  case "${SHORT_INTEGRATION_TEST:-no}" in
-    yes|true|y)
-      TEST_SHORT="-test.short"
-      ;;
-    *)
-      TEST_SHORT=""
-      ;;
-    esac
-
-  case "${INTEGRATION_TEST_RUN:-no}" in
-    no)
-      TEST_RUN="-test.run ."
-      ;;
-    *)
-      TEST_RUN="-test.run ${INTEGRATION_TEST_RUN}"
-      ;;
-    esac
-
-  "${INTEGRATION_TEST}" -test.v -talos.failfast -talos.talosctlpath "${TALOSCTL}" -talos.kubectlpath "${KUBECTL}" -talos.provisioner "${PROVISIONER}" -talos.name "${CLUSTER_NAME}" ${TEST_RUN} ${TEST_SHORT}
-}
-
-function run_talos_integration_test_docker {
-  case "${SHORT_INTEGRATION_TEST:-no}" in
-    yes|true|y)
-      TEST_SHORT="-test.short"
-      ;;
-    *)
-      TEST_SHORT=""
-      ;;
-    esac
-
-  case "${INTEGRATION_TEST_RUN:-no}" in
-    no)
-      TEST_RUN="-test.run ."
-      ;;
-    *)
-      TEST_RUN="-test.run ${INTEGRATION_TEST_RUN}"
-      ;;
-    esac
-
-  "${INTEGRATION_TEST}" -test.v -talos.talosctlpath "${TALOSCTL}" -talos.kubectlpath "${KUBECTL}" -talos.k8sendpoint 127.0.0.1:6443 -talos.provisioner "${PROVISIONER}" -talos.name "${CLUSTER_NAME}" ${TEST_RUN} ${TEST_SHORT}
-}
-
 function run_kubernetes_conformance_test {
   "${TALOSCTL}" conformance kubernetes --mode="${1}"
 }
@@ -186,57 +142,4 @@ function dump_cluster_state {
   "${TALOSCTL}" -n ${nodes} services
   ${KUBECTL} get nodes -o wide
   ${KUBECTL} get pods --all-namespaces -o wide
-}
-
-function build_registry_mirrors {
-  if [[ "${CI:-false}" == "true" ]]; then
-    REGISTRY_MIRROR_FLAGS=
-
-    for registry in docker.io k8s.gcr.io quay.io gcr.io ghcr.io registry.dev.talos-systems.io; do
-      local service="registry-${registry//./-}.ci.svc"
-      local addr=`python3 -c "import socket; print(socket.gethostbyname('${service}'))"`
-
-      REGISTRY_MIRROR_FLAGS="${REGISTRY_MIRROR_FLAGS} --registry-mirror ${registry}=http://${addr}:5000"
-    done
-  else
-    # use the value from the environment, if present
-    REGISTRY_MIRROR_FLAGS=${REGISTRY_MIRROR_FLAGS:-}
-  fi
-}
-
-function run_extensions_test {
-  echo "Testing gVsisor..."
-  ${KUBECTL} apply -f ${PWD}/hack/gvisor/manifest.yaml
-  sleep 10
-  ${KUBECTL} wait --for=condition=ready pod nginx-gvisor --timeout=1m
-
-  echo "Testing firmware extension..."
-  ${TALOSCTL} ls -lr /lib/firmware | grep intel-ucode
-
-  echo "Testing extension service..."
-  curl http://172.20.1.2/ | grep Hello
-}
-
-function run_day_two_tests {
-  rm -rf "${TMP}/day-two-state"
-  # pulumi needs to be in $PATH temporarily
-  PATH="${PATH}:$(dirname ${PULUMI})" ${D2CTL} up --state-path "${TMP}/day-two-state" --config-path "${PWD}/hack/day-two/config.yaml"
-
-  ${KUBECTL} --namespace loki wait --timeout 900s --for=jsonpath='{.status.availableReplicas}=1' deployment/loki-kube-state-metrics
-  ${KUBECTL} --namespace loki wait --timeout 900s --for=jsonpath='{.status.availableReplicas}=1' deployment/loki-prometheus-server
-  ${KUBECTL} --namespace loki wait --timeout 900s --for=jsonpath='{.status.availableReplicas}=1' deployment/loki-grafana
-
-  ${KUBECTL} --namespace metallb wait --timeout 900s --for=jsonpath='{.status.availableReplicas}=1' deployment/metallb-controller
-
-  ${KUBECTL} --namespace ingress wait --timeout 900s --for=jsonpath='{.status.availableReplicas}=1' deployment/ingress-nginx-controller
-
-  # wait for the controller to populate the status field
-  sleep 10
-  ${KUBECTL} --namespace rook-ceph wait --timeout=1800s --for=jsonpath='{.status.phase}=Ready' cephclusters.ceph.rook.io/rook-ceph
-  ${KUBECTL} --namespace rook-ceph wait --timeout=1800s --for=jsonpath='{.status.state}=Created' cephclusters.ceph.rook.io/rook-ceph
-  # .status.ceph is populated only after the cluster comes up
-  sleep 20
-  ${KUBECTL} --namespace rook-ceph wait --timeout=1800s --for=jsonpath='{.status.ceph.health}=HEALTH_OK' cephclusters.ceph.rook.io/rook-ceph
-  # hack until https://github.com/kastenhq/kubestr/issues/101 is addressed
-  KUBERNETES_SERVICE_HOST= KUBECONFIG="${TMP}/kubeconfig" ${KUBESTR} fio --storageclass ceph-block --size 10G
 }

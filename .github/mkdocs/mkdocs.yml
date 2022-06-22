@@ -2,11 +2,11 @@
 site_name: Hackathon 2022
 site_description:
 site_author: Michael Fornaro
-site_url: https://xunholy.github.io/cluster-api/
+site_url: https://xunholy.github.io/hackathon-2022/
 
 # https://squidfunk.github.io/mkdocs-material/setup/adding-a-git-repository/#repository-name
-repo_name: xunholy/cluster-api/
-repo_url: https://github.com/xunholy/cluster-api/
+repo_name: xunholy/hackathon-2022/
+repo_url: https://github.com/xunholy/hackathon-2022/
 
 # https://squidfunk.github.io/mkdocs-material/setup/adding-a-git-repository/#edit-button
 edit_uri: 'edit/main/docs/'
