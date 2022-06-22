@@ -1,0 +1,8 @@
+version: '3.8'
+
+services:
+  terraform:
+    image: hashicorp/terraform:1.0.6
+    volumes:
+      - .:/terraform
+    working_dir: /terraform/${TERRAFORM_DIR}

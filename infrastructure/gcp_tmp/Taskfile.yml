@@ -1,0 +1,95 @@
+version: '3'
+
+tasks:
+
+  ## CLUSTER
+  cluster-init:
+    desc: "Terraform init cluster"
+    cmds:
+      - TERRAFORM_DIR=cluster docker-compose -f docker-compose.yml run --rm terraform init -reconfigure
+
+  cluster-plan:
+    desc: "Terraform plan cluster"
+    cmds:
+      - TERRAFORM_DIR=cluster docker-compose -f docker-compose.yml run --rm terraform plan
+
+
+  cluster-apply:
+    desc: "Terraform apply cluster"
+    cmds:
+      - TERRAFORM_DIR=cluster docker-compose -f docker-compose.yml run --rm terraform apply -auto-approve
+
+  cluster-destroy:
+    desc: "Terraform destroy cluster"
+    cmds:
+      - TERRAFORM_DIR=cluster docker-compose -f docker-compose.yml run --rm terraform destroy -auto-approve
+
+
+
+## network
+
+  network-init:
+    desc: "Terraform init network"
+    cmds:
+      - TERRAFORM_DIR=network docker-compose -f docker-compose.yml run --rm terraform init #-reconfigure
+
+  network-plan:
+    desc: "Terraform plan network"
+    cmds:
+      - TERRAFORM_DIR=network TF_LOG=TRACE docker-compose -f docker-compose.yml run --rm terraform plan
+
+
+  network-apply:
+    desc: "Terraform apply network"
+    cmds:
+      - TERRAFORM_DIR=network docker-compose -f docker-compose.yml run --rm terraform apply -auto-approve
+
+  network-destroy:
+    desc: "Terraform destroy network"
+    cmds:
+      - TERRAFORM_DIR=network docker-compose -f docker-compose.yml run --rm terraform destroy
+
+
+  ## Loadbalancer
+  loadbalancer-ext-init:
+    desc: "Terraform init loadbalancer ext"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-ext docker-compose -f docker-compose.yml run --rm terraform init
+
+  loadbalancer-ext-plan:
+    desc: "Terraform plan loadbalancer ext"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-ext docker-compose -f docker-compose.yml run --rm terraform plan
+
+
+  loadbalancer-ext-apply:
+    desc: "Terraform apply loadbalancer ext"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-ext docker-compose -f docker-compose.yml run --rm terraform apply -auto-approve
+
+  loadbalancer-ext-destroy:
+    desc: "Terraform destroy loadbalancer ext"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-ext docker-compose -f docker-compose.yml run --rm terraform destroy -auto-approve
+
+  ## Loadbalancer
+  loadbalancer-int-init:
+    desc: "Terraform init loadbalancer int"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-int docker-compose -f docker-compose.yml run --rm terraform init
+
+  loadbalancer-int-plan:
+    desc: "Terraform plan loadbalancer int"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-int docker-compose -f docker-compose.yml run --rm terraform plan
+
+
+  loadbalancer-int-apply:
+    desc: "Terraform apply loadbalancer int"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-int docker-compose -f docker-compose.yml run --rm terraform apply -auto-approve
+
+  loadbalancer-int-destroy:
+    desc: "Terraform destroy loadbalancer int"
+    cmds:
+      - TERRAFORM_DIR=loadbalancer-int docker-compose -f docker-compose.yml run --rm terraform destroy -auto-approve
