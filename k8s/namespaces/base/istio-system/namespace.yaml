@@ -4,4 +4,4 @@ kind: Namespace
 metadata:
   name: istio-system
   labels:
-    pod-security.kubernetes.io/warn: Privileged
+    pod-security.kubernetes.io/warn: privileged
