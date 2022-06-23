@@ -82,5 +82,5 @@ spec:
     kind: GitRepository
     name: flux-system
   dependsOn:
-    - name: istio-system-istio-istiod
+    - name: istio-system-istiod
       namespace: flux-system
