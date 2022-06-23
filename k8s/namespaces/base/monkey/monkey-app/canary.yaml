@@ -2,7 +2,6 @@ apiVersion: flagger.app/v1beta1
 kind: Canary
 metadata:
   name: monkey-app
-  namespace: monkey
 spec:
   # deployment reference
   targetRef:
