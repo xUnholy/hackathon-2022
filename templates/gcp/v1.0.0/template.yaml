@@ -1,0 +1,168 @@
+# Template examples https://github.com/kubernetes-sigs/cluster-api-provider-gcp/blob/main/templates/cluster-template.yaml
+---
+## Cluster configs
+
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: Cluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  clusterNetwork:
+    pods:
+      # Match defaults from Talos setup https://www.talos.dev/v1.0/reference/configuration/#clusternetworkconfig
+      cidrBlocks: ["10.244.0.0/16"]
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    kind: GCPCluster
+    name: ${CLUSTER_NAME}
+  controlPlaneRef:
+    kind: TalosControlPlane
+    apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+    name: ${CLUSTER_NAME}-controlplane
+---
+# https://github.com/kubernetes-sigs/cluster-api-provider-gcp/blob/main/api/v1beta1/gcpcluster_types.go
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: GCPCluster
+metadata:
+  name: ${CLUSTER_NAME}
+spec:
+  project: ${GCP_PROJECT}
+  region: ${GCP_REGION}
+  network:
+    name: ${GCP_NETWORK}
+---
+## Control plane configs
+
+apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
+kind: TalosControlPlane
+metadata:
+  name: ${CLUSTER_NAME}-controlplane
+spec:
+  version: v1.22.10
+  replicas: 3
+  infrastructureTemplate:
+    kind: GCPMachineTemplate
+    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    name: ${CLUSTER_NAME}-controlplane
+  controlPlaneConfig:
+    controlplane:
+      generateType: controlplane
+      talosVersion: v1.0.6
+    init:
+      generateType: init
+      configPatches:
+        - op: replace
+          path: /cluster/proxy/disabled
+          value: true
+        - op: replace
+          path: /cluster/network/cni
+          value:
+            name: custom
+            urls:
+              - https://raw.githubusercontent.com/xunholy/cluster-api/master/k8s/clusters/${CLUSTER_NAME}/cni.yaml
+---
+kind: GCPMachineTemplate
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+metadata:
+  name: ${CLUSTER_NAME}-controlplane
+spec:
+  template:
+    spec:
+      instanceType: n1-standard-2
+      image: projects/${GCP_PROJECT}/global/images/talos-v1-0-6
+      publicIP: true
+      rootDeviceSize: 50
+      serviceAccounts:
+        email: ${GCP_VM_SVC_ACCOUNT}
+        scopes:
+          - "https://www.googleapis.com/auth/compute"
+---
+## Worker configs
+
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  labels:
+    cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+    nodepool: nodepool-a
+  name: ${CLUSTER_NAME}-workers
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 50%
+      maxSurge: 10%
+      deletePolicy: Oldest
+  clusterName: ${CLUSTER_NAME}
+  replicas: 3
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+      nodepool: nodepool-a
+  template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: ${CLUSTER_NAME}
+        nodepool: nodepool-a
+    spec:
+      clusterName: ${CLUSTER_NAME}
+      failureDomain: ${GCP_REGION}-a
+      version: 1.24.1
+      bootstrap:
+        configRef:
+          name: ${CLUSTER_NAME}-workers
+          apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+          kind: TalosConfigTemplate
+      infrastructureRef:
+        name: ${CLUSTER_NAME}-workers
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+        kind: GCPMachineTemplate
+  revisionHistoryLimit: 3
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: GCPMachineTemplate
+metadata:
+  name: ${CLUSTER_NAME}-workers
+spec:
+  template:
+    spec:
+      instanceType: n1-standard-2
+      image: projects/${GCP_PROJECT}/global/images/talos-v1-0-6
+      serviceAccounts:
+        email: ${GCP_VM_SVC_ACCOUNT}
+        scopes:
+          - "https://www.googleapis.com/auth/compute"
+      publicIP: true
+      rootDeviceSize: 50
+      # TODO: Investigate further; Preemptible defines if instance is preemptible
+      # preemptible: false
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
+kind: TalosConfigTemplate
+metadata:
+  name: ${CLUSTER_NAME}-workers
+spec:
+  template:
+    spec:
+      generateType: join
+      talosVersion: v1.0.6
+---
+## Health check for workers - https://pkg.go.dev/sigs.k8s.io/cluster-api@v1.1.4/api/v1beta1#MachineHealthCheckSpec
+apiVersion: cluster.x-k8s.io/v1alpha4
+kind: MachineHealthCheck
+metadata:
+  name: ${CLUSTER_NAME}-worker-hc
+spec:
+  clusterName: ${CLUSTER_NAME}
+  maxUnhealthy: 40%
+  nodeStartupTimeout: 20m
+  selector:
+    matchLabels:
+      nodepool: nodepool-a
+  unhealthyConditions:
+    - type: Ready
+      status: Unknown
+      timeout: 300s
+    - type: Ready
+      status: "False"
+      timeout: 300s
