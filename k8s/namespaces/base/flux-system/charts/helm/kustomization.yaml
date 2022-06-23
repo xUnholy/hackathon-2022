@@ -4,4 +4,3 @@ resources:
   - flagger-charts.yaml
   - ingress-nginx-chart.yaml
   - istio-charts.yaml
-  - flagger-charts.yaml
