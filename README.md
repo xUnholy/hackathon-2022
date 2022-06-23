@@ -24,6 +24,8 @@ Install all the tools required.
 
 Create Business case and benefits for the users
 
+> Many factors drive multi-cluster topologies, including close user proximity for apps, cluster and regional high availability, security and organizational separation, cluster migration, and data locality. These use cases are rarely isolated. As the reasons for multiple clusters grow, the need for a formal and productized multi-cluster platform becomes more urgent.
+
 TODO
 
 ### Cluster Mesh
@@ -49,10 +51,9 @@ The following must be done to setup your GCP project.
 1. Create GCP project
 2. Enable required APIs (*compute engine)
 3. Create `cluster-api` GSA and provide it with `role/Owner` (*scope could be smaller but for simplicity Owner is sufficent)
-4. Export GSA token locally under .secrets/*
-5. Create GCS bucket called `talos-images-01` - name needs to be globally unique so a UID suffix would be best
-6. Create the VM images using `task talos:image`
-7. Update FW rules to include TCP ports for `6443,50000` which is used by Talos to connect and bootstrap nodes (* see Limitation section about I/O Timeouts)
+4. Create GCS bucket called `talos-images-01` - name needs to be globally unique so a UID suffix would be best
+5. Create the VM images using `task talos:image`
+6. Update FW rules to include TCP ports for `6443,50000` which is used by Talos to connect and bootstrap nodes (* see Limitation section about I/O Timeouts)
 
 WIP
 
@@ -71,6 +72,12 @@ Recommendation is to create your own existing network: https://github.com/kubern
 > Calico is the only supported CNI right now. The AWS Cluster API provider sets up Calico rules by default in its created security groups. Other CNIs can likely be used, but it will take some extra work on setting up the groups manually and specifying them as extra groups in the cluster manifests.
 
 https://github.com/siderolabs/cluster-api-templates/tree/main/aws#assumptions-and-caveats
+
+### PodSecurity
+
+Default enabled in 1.23.x
+
+https://kubernetes.io/docs/concepts/security/pod-security-admission/#pod-security-levels
 
 ## Stretch Goals
 

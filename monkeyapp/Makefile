@@ -14,6 +14,5 @@ docker-build-push-api-1-amd64: docker-build-api-1-amd64
 label-ns:
 	 kubectl label namespace monkey istio-injection=enabled
 
-
 rollout:
 	kubectl -n monkey rollout restart deployment monkey
