@@ -4,5 +4,5 @@ resources:
   - canary.yaml
   - deployment.yaml
   - ingress.yaml
-  - service.yaml
+  # - service.yaml
   - virtualservice.yaml
