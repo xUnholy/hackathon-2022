@@ -43,7 +43,7 @@ export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.23.7}
 
 export NAME_PREFIX="cluster-00"
 export TIMEOUT=1200
-export NUM_NODES=2
+export NUM_NODES=6
 export TEMPLATE_TYPE=test
 
 # default values, overridden by talosctl cluster create tests
@@ -111,11 +111,11 @@ function create_cluster_capi {
   foo=${foo%":443"}
   echo "LB IP address : ${foo}"
 
-  mkdir -p "k8s/clusters/${CLUSTER_NAME}"
-  #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
-  helm repo add cilium https://helm.cilium.io/ --force-update
-  helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/${TEMPLATE_TYPE}/integrations/cilium/values.yaml --set k8sServiceHost=${foo} --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
-  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-00"
+  # mkdir -p "k8s/clusters/${CLUSTER_NAME}"
+  # #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
+  # helm repo add cilium https://helm.cilium.io/ --force-update
+  # helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/${TEMPLATE_TYPE}/integrations/cilium/values.yaml --set k8sServiceHost=${foo} --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
+  # kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-00"
 
   # Wait for nodes to be ready
   timeout=$(($(date +%s) + ${TIMEOUT}))
