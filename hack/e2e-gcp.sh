@@ -42,6 +42,5 @@ function setup {
 
 setup
 create_cluster_capi gcp
-# run_talos_integration_test
-# run_kubernetes_integration_test
-# pivot_cluster_capi gcp
+run_kubernetes_integration_test
+pivot_cluster_capi gcp

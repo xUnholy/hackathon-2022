@@ -135,7 +135,33 @@ function create_cluster_capi {
 }
 
 function pivot_cluster_capi {
-  clusterctl move --to-kubeconfig="${TMP}/kubeconfig"
+
+  CAPI_VERSION="${CAPI_VERSION:-1.1.4}"
+  CAPA_VERSION="${CAPA_VERSION:-1.4.1}"
+  CAPG_VERSION="${CAPG_VERSION:-1.1.0}"
+
+  # CABPT
+  CABPT_NS="cabpt-system"
+
+  clusterctl init \
+      --config hack/clusterctl.yaml \
+      --core "cluster-api:v${CAPI_VERSION}" \
+      --control-plane "talos" \
+      --infrastructure "gcp:v${CAPG_VERSION}"  \
+      --bootstrap "talos" \
+      --kubeconfig "${TMP}/kubeconfig-00"
+
+  gcloud auth activate-service-account --key-file "$(pwd)/.secrets/gcp-credentials-cluster-api.json"
+
+  # Wait for the talosconfig
+  timeout=$(($(date +%s) + ${TIMEOUT}))
+  until ${KUBECTL} wait --timeout=1s --for=condition=Ready -n ${CABPT_NS} pods --all; do
+    [[ $(date +%s) -gt $timeout ]] && exit 1
+    echo 'Waiting to CABPT pod to be available...'
+    sleep 5
+  done
+
+  clusterctl move --to-kubeconfig="${TMP}/kubeconfig-00"
 }
 
 function run_kubernetes_conformance_test {
@@ -159,6 +185,7 @@ function run_worker_cis_benchmark {
 }
 
 function get_kubeconfig {
+
   clusterctl get kubeconfig cluster-00 > "${TMP}/kubeconfig-00"
 }
 
