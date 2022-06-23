@@ -37,30 +37,35 @@ export KUBECTL="kubectl"
 export TALOSCTL="talosctl"
 export CILIUM_VERSION="1.11.5"
 
+export CLUSTER_NAME="cluster-00"
+export GITHUB_USER="xunholy"
+export GITHUB_REPO="hackathon-2022"
+export GITHUB_BRANCH="master"
+export CLI_ARGS=""
+
 # Kubernetes
 
 export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.23.7}
 
-export NAME_PREFIX="cluster-00"
+export CLUSTER_NAME_PREFIX="cluster"
+export CLUSTER_NAME_SUFFIX="00"
 export TIMEOUT=1200
-export NUM_NODES=6
+export NUM_NODES=2
 export TEMPLATE_TYPE=test
 
-# default values, overridden by talosctl cluster create tests
-PROVISIONER=
-CLUSTER_NAME=
+# TODO make a create_cluster_capi vs a non-capi cluster; This latter func just needs to template and commit the cluster.yaml to a flux managed dir
 
 # Create a cluster via CAPI.
 function create_cluster_capi {
   # Wait for first controlplane machine to have a name
   timeout=$(($(date +%s) + ${TIMEOUT}))
-  until [ -n "$(${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${NAME_PREFIX} --all-namespaces -o json | jq -re '.items[0].metadata.name | select (.!=null)')" ]; do
+  until [ -n "$(${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX} --all-namespaces -o json | jq -re '.items[0].metadata.name | select (.!=null)')" ]; do
     [[ $(date +%s) -gt $timeout ]] && exit 1
     sleep 10
-    ${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${NAME_PREFIX} --all-namespaces
+    ${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX} --all-namespaces
   done
 
-  FIRST_CP_NODE=$(${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${NAME_PREFIX} --all-namespaces -o json | jq -r '.items[0].metadata.name')
+  FIRST_CP_NODE=$(${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX} --all-namespaces -o json | jq -r '.items[0].metadata.name')
 
   # Wait for first controlplane machine to have a talosconfig ref
   timeout=$(($(date +%s) + ${TIMEOUT}))
@@ -100,30 +105,41 @@ function create_cluster_capi {
   # Wait for nodes to check in
 
   timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' --kubeconfig "${TMP}/kubeconfig-00" | grep ${NUM_NODES} >/dev/null; do
+  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' --kubeconfig "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}" | grep ${NUM_NODES} >/dev/null; do
     [[ $(date +%s) -gt $timeout ]] && exit 1
-    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-00" && :
+    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}" && :
     sleep 10
   done
 
-  url=$(cat "${TMP}/kubeconfig-00" | yq '.clusters[].cluster.server')
+  url=$(cat "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}" | yq '.clusters[].cluster.server')
   foo=${url#"https://"}
   foo=${foo%":443"}
   echo "LB IP address : ${foo}"
 
-  # mkdir -p "k8s/clusters/${CLUSTER_NAME}"
-  # #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
-  # helm repo add cilium https://helm.cilium.io/ --force-update
-  # helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/${TEMPLATE_TYPE}/integrations/cilium/values.yaml --set k8sServiceHost=${foo} --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
-  # kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-00"
+  mkdir -p "k8s/clusters/${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}"
+  clusterctl generate cluster "${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}/cluster.yaml"
+  helm repo add cilium https://helm.cilium.io/ --force-update
+  helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/${TEMPLATE_TYPE}/integrations/cilium/values.yaml --set k8sServiceHost=${foo} --dry-run > "k8s/clusters/${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}/cni.yaml"
+  kubectl apply -f "k8s/clusters/${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}"
 
   # Wait for nodes to be ready
   timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes --kubeconfig "${TMP}/kubeconfig-00" > /dev/null; do
+  until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes --kubeconfig "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}" > /dev/null; do
     [[ $(date +%s) -gt $timeout ]] && exit 1
-    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-00" && :
+    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}" && :
     sleep 10
   done
+
+  flux bootstrap github \
+        --owner="${GITHUB_USER}" \
+        --repository="${GITHUB_REPO}" \
+        --path="k8s/clusters/${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}" \
+        --branch="${GITHUB_BRANCH}" \
+        --network-policy=false \
+        --personal=true \
+        --private=false \
+        --kubeconfig="${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}" \
+        "${CLI_ARGS}"
 
   # Verify that we have an HA controlplane
   # timeout=$(($(date +%s) + ${TIMEOUT}))
@@ -135,33 +151,7 @@ function create_cluster_capi {
 }
 
 function pivot_cluster_capi {
-
-  CAPI_VERSION="${CAPI_VERSION:-1.1.4}"
-  CAPA_VERSION="${CAPA_VERSION:-1.4.1}"
-  CAPG_VERSION="${CAPG_VERSION:-1.1.0}"
-
-  # CABPT
-  CABPT_NS="cabpt-system"
-
-  clusterctl init \
-      --config hack/clusterctl.yaml \
-      --core "cluster-api:v${CAPI_VERSION}" \
-      --control-plane "talos" \
-      --infrastructure "gcp:v${CAPG_VERSION}"  \
-      --bootstrap "talos" \
-      --kubeconfig "${TMP}/kubeconfig-00"
-
-  gcloud auth activate-service-account --key-file "$(pwd)/.secrets/gcp-credentials-cluster-api.json"
-
-  # Wait for the talosconfig
-  timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} wait --timeout=1s --for=condition=Ready -n ${CABPT_NS} pods --all; do
-    [[ $(date +%s) -gt $timeout ]] && exit 1
-    echo 'Waiting to CABPT pod to be available...'
-    sleep 5
-  done
-
-  clusterctl move --to-kubeconfig="${TMP}/kubeconfig-00"
+  clusterctl move --to-kubeconfig="${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}"
 }
 
 function run_kubernetes_conformance_test {
@@ -185,8 +175,7 @@ function run_worker_cis_benchmark {
 }
 
 function get_kubeconfig {
-
-  clusterctl get kubeconfig cluster-00 > "${TMP}/kubeconfig-00"
+  clusterctl get kubeconfig ${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX} > "${TMP}/kubeconfig-${CLUSTER_NAME_SUFFIX}"
 }
 
 function dump_cluster_state {

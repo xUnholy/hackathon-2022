@@ -23,7 +23,7 @@ clusterctl init \
     --core "cluster-api:v${CAPI_VERSION}" \
     --control-plane "talos" \
     --infrastructure "gcp:v${CAPG_VERSION}"  \
-    --bootstrap "talos"
+    --bootstrap "talos" --kubeconfig /tmp/e2e/gcp/kubeconfig-00
 
 gcloud auth activate-service-account --key-file "$(pwd)/.secrets/gcp-credentials-cluster-api.json"
 

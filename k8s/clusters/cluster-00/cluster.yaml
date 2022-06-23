@@ -2,7 +2,7 @@ apiVersion: cluster.x-k8s.io/v1beta1
 kind: Cluster
 metadata:
   name: cluster-00
-  namespace: cacppt-system
+  namespace: default
 spec:
   clusterNetwork:
     pods:
@@ -21,7 +21,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPCluster
 metadata:
   name: cluster-00
-  namespace: cacppt-system
+  namespace: default
 spec:
   network:
     name: default
@@ -32,7 +32,7 @@ apiVersion: controlplane.cluster.x-k8s.io/v1alpha3
 kind: TalosControlPlane
 metadata:
   name: cluster-00-controlplane
-  namespace: cacppt-system
+  namespace: default
 spec:
   controlPlaneConfig:
     controlplane:
@@ -59,7 +59,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPMachineTemplate
 metadata:
   name: cluster-00-controlplane
-  namespace: cacppt-system
+  namespace: default
 spec:
   template:
     spec:
@@ -79,21 +79,15 @@ metadata:
     cluster.x-k8s.io/cluster-name: cluster-00
     nodepool: nodepool-a
   name: cluster-00-workers
-  namespace: cacppt-system
+  namespace: default
 spec:
   clusterName: cluster-00
   replicas: 1
-  revisionHistoryLimit: 3
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       cluster.x-k8s.io/cluster-name: cluster-00
       nodepool: nodepool-a
-  strategy:
-    rollingUpdate:
-      deletePolicy: Oldest
-      maxSurge: 10%
-      maxUnavailable: 50%
-    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -117,7 +111,7 @@ apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPMachineTemplate
 metadata:
   name: cluster-00-workers
-  namespace: cacppt-system
+  namespace: default
 spec:
   template:
     spec:
@@ -134,29 +128,9 @@ apiVersion: bootstrap.cluster.x-k8s.io/v1alpha3
 kind: TalosConfigTemplate
 metadata:
   name: cluster-00-workers
-  namespace: cacppt-system
+  namespace: default
 spec:
   template:
     spec:
       generateType: join
       talosVersion: v1.0.6
----
-apiVersion: cluster.x-k8s.io/v1alpha4
-kind: MachineHealthCheck
-metadata:
-  name: cluster-00-worker-hc
-  namespace: cacppt-system
-spec:
-  clusterName: cluster-00
-  maxUnhealthy: 40%
-  nodeStartupTimeout: 20m
-  selector:
-    matchLabels:
-      nodepool: nodepool-a
-  unhealthyConditions:
-  - status: Unknown
-    timeout: 300s
-    type: Ready
-  - status: "False"
-    timeout: 300s
-    type: Ready

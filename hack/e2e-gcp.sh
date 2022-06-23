@@ -14,7 +14,7 @@ function setup {
   # gcloud --quiet --project talos-testbed compute images create talos-e2e-${SHA} --source-uri gs://talos-e2e/gcp-${SHA}.tar.gz
 
   ## Cluster-wide vars
-  export CLUSTER_NAME=${NAME_PREFIX}
+  export CLUSTER_NAME="${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}"
   export GCP_PROJECT=rising-capsule-353505
   export GCP_REGION=us-central1
   export GCP_NETWORK=default
@@ -33,7 +33,7 @@ function setup {
   export GCP_NODE_VOL_SIZE=50
   export GCP_NODE_IMAGE_ID=projects/${GCP_PROJECT}/global/images/talos-v1-0-6
 
-  clusterctl generate cluster ${NAME_PREFIX} \
+  clusterctl generate cluster ${CLUSTER_NAME} \
     --kubeconfig ${KUBECONFIG} \
     --from templates/gcp/test/template.yaml > ${TMP}/cluster.yaml
 
@@ -42,5 +42,4 @@ function setup {
 
 setup
 create_cluster_capi gcp
-# run_kubernetes_integration_test
-pivot_cluster_capi gcp
+# pivot_cluster_capi gcp
