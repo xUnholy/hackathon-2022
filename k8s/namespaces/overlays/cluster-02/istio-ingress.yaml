@@ -29,15 +29,15 @@ spec:
   dependsOn:
     - name: istio-system-istiod
       namespace: flux-system
-  patches:
-    - patch: |-
-        apiVersion: helm.toolkit.fluxcd.io/v2beta1
-        kind: HelmRelease
-        metadata:
-          name: istio-gateway
-          namespace: istio-ingress
-        spec:
-          values:
-            service:
-              annotations:
-                cloud.google.com/neg: '{"exposed_ports": {"80":{"name": "neg-2-80"}}}'
+  # patches:
+  #   - patch: |-
+  #       apiVersion: helm.toolkit.fluxcd.io/v2beta1
+  #       kind: HelmRelease
+  #       metadata:
+  #         name: istio-gateway
+  #         namespace: istio-ingress
+  #       spec:
+  #         values:
+  #           service:
+  #             annotations:
+  #               cloud.google.com/neg: '{"exposed_ports": {"80":{"name": "neg-2-80"}}}'
