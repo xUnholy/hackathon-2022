@@ -5,3 +5,4 @@ metadata:
   name: monkey
   labels:
     istio-injection: enabled
+    pod-security.kubernetes.io/warn: Privileged
