@@ -18,7 +18,6 @@ failure() {
   clusterctl delete --all
 }
 
-
 # Env vars for cloud accounts
 set +x
 export GCP_B64ENCODED_CREDENTIALS=$( cat $(pwd)/.secrets/gcp-credentials-cluster-api.json | base64 | tr -d '\n' )
@@ -40,4 +39,3 @@ until ${KUBECTL} wait --timeout=1s --for=condition=Ready -n ${CABPT_NS} pods --a
   echo 'Waiting to CABPT pod to be available...'
   sleep 5
 done
-

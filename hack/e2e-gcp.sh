@@ -22,20 +22,20 @@ function setup {
 
 
   ## Control plane vars
-  export CONTROL_PLANE_MACHINE_COUNT=3
+  export CONTROL_PLANE_MACHINE_COUNT=1
   export GCP_CONTROL_PLANE_MACHINE_TYPE=n1-standard-2
   export GCP_CONTROL_PLANE_VOL_SIZE=50
   export GCP_CONTROL_PLANE_IMAGE_ID=projects/${GCP_PROJECT}/global/images/talos-v1-0-6
 
   ## Worker vars
-  export WORKER_MACHINE_COUNT=3
+  export WORKER_MACHINE_COUNT=1
   export GCP_NODE_MACHINE_TYPE=n1-standard-2
   export GCP_NODE_VOL_SIZE=50
   export GCP_NODE_IMAGE_ID=projects/${GCP_PROJECT}/global/images/talos-v1-0-6
 
   clusterctl generate cluster ${NAME_PREFIX} \
     --kubeconfig ${KUBECONFIG} \
-    --from templates/gcp/standard/template.yaml > ${TMP}/cluster.yaml
+    --from templates/gcp/test/template.yaml > ${TMP}/cluster.yaml
 
   kubectl apply -f ${TMP}/cluster.yaml
 }
@@ -44,3 +44,4 @@ setup
 create_cluster_capi gcp
 # run_talos_integration_test
 # run_kubernetes_integration_test
+# pivot_cluster_capi gcp

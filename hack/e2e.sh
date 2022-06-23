@@ -37,7 +37,7 @@ export CILIUM_VERSION="1.11.5"
 
 export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.24.1}
 
-export NAME_PREFIX="cluster-chaos-monkeys"
+export NAME_PREFIX="cluster-00"
 export TIMEOUT=1200
 export NUM_NODES=2
 export TEMPLATE_TYPE=standard
@@ -93,7 +93,6 @@ function create_cluster_capi {
     sleep 10
   done
 
-
   mkdir -p "k8s/clusters/${CLUSTER_NAME}"
   #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
   helm repo add cilium https://helm.cilium.io/ --force-update
@@ -129,6 +128,10 @@ function create_cluster_capi {
   #   ${KUBECTL} get nodes -l node-role.kubernetes.io/master='' && :
   #   sleep 10
   # done
+}
+
+function pivot_cluster_capi {
+  clusterctl move --to-kubeconfig="${TMP}/kubeconfig"
 }
 
 function run_kubernetes_conformance_test {
