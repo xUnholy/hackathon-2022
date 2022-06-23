@@ -39,7 +39,7 @@ export CILIUM_VERSION="1.11.5"
 
 # Kubernetes
 
-export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.24.1}
+export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.23.7}
 
 export NAME_PREFIX="cluster-00"
 export TIMEOUT=1200
@@ -97,34 +97,33 @@ function create_cluster_capi {
     sleep 10
   done
 
-  # url=$(cat "${TMP}/kubeconfig" | yq '.clusters[].cluster.server')
-  # foo=${url#"https://"}
-  # foo=${foo%":443"}
-  # echo "LB IP address : ${foo}"
-
   # Wait for nodes to check in
-  
+
   timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' --kubeconfig ${KUBECONFIG} | grep ${NUM_NODES} >/dev/null; do
+  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' --kubeconfig "${TMP}/kubeconfig-00" | grep ${NUM_NODES} >/dev/null; do
     [[ $(date +%s) -gt $timeout ]] && exit 1
-    ${KUBECTL} get nodes -o wide && :
+    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-00" && :
     sleep 10
   done
+
+  url=$(cat "${TMP}/kubeconfig-00" | yq '.clusters[].cluster.server')
+  foo=${url#"https://"}
+  foo=${foo%":443"}
+  echo "LB IP address : ${foo}"
 
   mkdir -p "k8s/clusters/${CLUSTER_NAME}"
   #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
   helm repo add cilium https://helm.cilium.io/ --force-update
-  helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/test/integrations/cilium/values.yaml --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
-  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${KUBECONFIG}"
+  helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/${TEMPLATE_TYPE}/integrations/cilium/values.yaml --set k8sServiceHost=${foo} --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
+  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-00"
 
-  # TODO: This will work only when CNI as deployed to cluster
   # Wait for nodes to be ready
-  # timeout=$(($(date +%s) + ${TIMEOUT}))
-  # until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes > /dev/null; do
-  #   [[ $(date +%s) -gt $timeout ]] && exit 1
-  #   ${KUBECTL} get nodes -o wide && :
-  #   sleep 10
-  # done
+  timeout=$(($(date +%s) + ${TIMEOUT}))
+  until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes --kubeconfig "${TMP}/kubeconfig-00" > /dev/null; do
+    [[ $(date +%s) -gt $timeout ]] && exit 1
+    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-00" && :
+    sleep 10
+  done
 
   # Verify that we have an HA controlplane
   # timeout=$(($(date +%s) + ${TIMEOUT}))
@@ -160,8 +159,7 @@ function run_worker_cis_benchmark {
 }
 
 function get_kubeconfig {
-  rm -f "${TMP}/kubeconfig"
-  "${TALOSCTL}" kubeconfig "${TMP}"
+  clusterctl get kubeconfig cluster-00 > "${TMP}/kubeconfig-00"
 }
 
 function dump_cluster_state {

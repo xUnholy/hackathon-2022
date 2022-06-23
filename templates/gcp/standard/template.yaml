@@ -70,7 +70,7 @@ spec:
     spec:
       instanceType: ${GCP_CONTROL_PLANE_MACHINE_TYPE}
       image: ${GCP_CONTROL_PLANE_IMAGE_ID}
-      publicIP: true
+      publicIP: false
       rootDeviceSize: ${GCP_CONTROL_PLANE_VOL_SIZE}
       serviceAccounts:
         email: ${GCP_VM_SVC_ACCOUNT}

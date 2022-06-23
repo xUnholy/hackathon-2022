@@ -20,7 +20,7 @@ imagePullSecrets:
 # - name: "image-pull-secret"
 
 # kubeConfigPath: ~/.kube/config
-k8sServiceHost: 34.117.37.140
+# k8sServiceHost: 
 k8sServicePort: 443
 
 cluster:
