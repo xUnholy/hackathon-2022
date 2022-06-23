@@ -18,33 +18,6 @@ spec:
   install:
     createNamespace: true
   values:
-    replicaCount: 3
     service:
-      loadBalancerIP: 192.168.1.180
-    resources:
-      requests:
-        cpu: 100m
-        memory: 128Mi
-      limits:
-        cpu: 200m
-        memory: 256Mi
-    affinity:
-      # These nodeAffinity's are required to schedule on arm64
-      nodeAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-          nodeSelectorTerms:
-          - matchExpressions:
-            - key: kubernetes.io/arch
-              operator: In
-              values:
-              - arm64
-      # This podAntiAffinity ensures ingress controllers are not scheduled on the same node
-      podAntiAffinity:
-        requiredDuringSchedulingIgnoredDuringExecution:
-        - labelSelector:
-            matchExpressions:
-            - key: istio
-              operator: In
-              values:
-              - ingressgateway
-          topologyKey: kubernetes.io/hostname
+      type: ClusterIP
+        
