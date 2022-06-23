@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monkey
+spec:
+  selector:
+    matchLabels:
+      app: monkey
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: monkey
+    spec:
+      containers:
+        - name: monkey
+          image: zolinz/api-1-amd64:10
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KUBERNETES_NODENAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 3
