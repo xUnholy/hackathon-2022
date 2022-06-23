@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: flagger
-      version: 1.18.0
+      version: 1.21.0
       sourceRef:
         kind: HelmRepository
         name: flagger-charts
@@ -31,4 +31,3 @@ spec:
     cleanupOnFail: true
   values:
     meshProvider: istio
-    metricsServer: http://x-prometheus.observability.svc.cluster.local:9090

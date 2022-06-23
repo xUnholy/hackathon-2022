@@ -21,3 +21,4 @@ spec:
     meshConfig:
       accessLogFile: /dev/stdout
       trustDomain: cluster.local
+
