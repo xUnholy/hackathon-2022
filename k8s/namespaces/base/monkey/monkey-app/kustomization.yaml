@@ -6,4 +6,4 @@ resources:
   - deployment.yaml
   - ingress.yaml
   - service.yaml
-  - virtualservice.yaml
+  # - virtualservice.yaml
