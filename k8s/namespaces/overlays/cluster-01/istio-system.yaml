@@ -31,23 +31,24 @@ spec:
     - name: istio-system-namespace
       namespace: flux-system
 ---
-apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
-kind: Kustomization
-metadata:
-  name: istio-system-istio-cni
-  namespace: flux-system
-spec:
-  interval: 5m
-  timeout: 10m
-  path: "./k8s/namespaces/base/istio-system/istio-cni"
-  prune: true
-  wait: true
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  dependsOn:
-    - name: istio-system-istio-base
-      namespace: flux-system
+# TODO: Unusable with Talos until the fix PR is merged: https://github.com/istio/istio/issues/38794
+# apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
+# kind: Kustomization
+# metadata:
+#   name: istio-system-istio-cni
+#   namespace: flux-system
+# spec:
+#   interval: 5m
+#   timeout: 10m
+#   path: "./k8s/namespaces/base/istio-system/istio-cni"
+#   prune: true
+#   wait: true
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   dependsOn:
+#     - name: istio-system-istio-base
+#       namespace: flux-system
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1beta2
 kind: Kustomization

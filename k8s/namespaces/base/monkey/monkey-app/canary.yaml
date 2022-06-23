@@ -26,7 +26,7 @@ spec:
     - istio-gateway.istio-system.svc.cluster.local
     # Istio virtual service host names (optional)
     hosts:
-    - app.chaosmonkeys.net
+    - test.chaosmonkeys.net
     # Istio traffic policy (optional)
     trafficPolicy:
       tls:
