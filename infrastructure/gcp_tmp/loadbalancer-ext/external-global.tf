@@ -8,7 +8,7 @@ resource "google_compute_global_forwarding_rule" "my-global-fr" {
   #ip_address  = "34.107.244.107"
   project = var.project_id
   ip_protocol           = "TCP"
-  load_balancing_scheme = "EXTERNAL"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
   port_range            = var.ports
   target                = google_compute_target_http_proxy.proxy[0].id
 }
@@ -27,38 +27,48 @@ resource "google_compute_target_http_proxy" "proxy" {
 resource "google_compute_url_map" "url_map" {
   count    = var.enabled ? 1 : 0
   provider = google-beta
-
+  default_service = google_compute_backend_service.neg_backend_a.id
 
   project = var.project_id
 
   name        = var.name
   description = var.desc
   host_rule {
-    hosts        = ["cluster-a.chaosmonkeys.net"  ]
-    path_matcher = "cluster-a"
+    hosts        = ["app.chaosmonkeys.net"  ]
+    path_matcher = "app"
   }
+//  host_rule {
+//    hosts        = ["cluster-b.chaosmonkeys.net" ]
+//    path_matcher = "cluster-b"
+//  }
+
   host_rule {
-    hosts        = ["cluster-b.chaosmonkeys.net" ]
-    path_matcher = "cluster-b"
+    hosts        = ["test.chaosmonkeys.net"  ]
+    path_matcher = "test"
   }
-  default_service = google_compute_backend_service.neg_backend_a.id
+
 
   path_matcher {
-    name = "cluster-a"
+    name = "app"
     default_service = google_compute_backend_service.neg_backend_a.id
 
-    route_rules {
-      priority = 1
-      match_rules {
-        prefix_match = "/"
+    path_rule {
+      paths   = ["/monkey"]
+      route_action {
+           weighted_backend_services {
+             backend_service = google_compute_backend_service.neg_backend_a.id
+             weight = 100
+           }
+          weighted_backend_services {
+            backend_service = google_compute_backend_service.neg_backend_b.id
+            weight = 900
+          }
       }
-
-      service = google_compute_backend_service.neg_backend_a.id
     }
   }
 
   path_matcher {
-    name = "cluster-b"
+    name = "test"
     default_service = google_compute_backend_service.neg_backend_b.id
 
     route_rules {
@@ -78,7 +88,7 @@ resource "google_compute_backend_service" "neg_backend_a" {
   provider = google-beta
   project = var.project_id
 
-  load_balancing_scheme = "EXTERNAL"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   backend {
     group = "https://www.googleapis.com/compute/v1/projects/rising-capsule-353505/zones/australia-southeast2-b/networkEndpointGroups/neg-a-80"
@@ -106,7 +116,7 @@ resource "google_compute_backend_service" "neg_backend_b" {
   provider = google-beta
   project = var.project_id
 
-  load_balancing_scheme = "EXTERNAL"
+  load_balancing_scheme = "EXTERNAL_MANAGED"
 
   backend {
     group = "https://www.googleapis.com/compute/v1/projects/rising-capsule-353505/zones/australia-southeast2-b/networkEndpointGroups/neg-b-80"
