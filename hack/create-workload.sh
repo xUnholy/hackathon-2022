@@ -18,6 +18,10 @@ export GCP_NETWORK=default
 
 export CILIUM_VERSION="1.11.5"
 
+export GITHUB_USER="xunholy"
+export GITHUB_REPO="hackathon-2022"
+export GITHUB_BRANCH="master"
+
 WORKDIR='./workdir'
 
 function createWorkload() {
@@ -34,14 +38,28 @@ function createWorkload() {
         --kubeconfig ${FL_KUBECONFIG} \
         --from templates/gcp/v$VERSION/template.yaml > "${WORKDIR}/${CLUSTER_NAME}/capi.yaml"
 
-    #kubectl apply -f "${WORKDIR}/${CLUSTER_NAME}/capi.yaml"
+    kubectl apply -f "${WORKDIR}/${CLUSTER_NAME}/capi.yaml"
+    
     sleep 3
+    
     FL_KUBECONFIG=$CLUSTER_NAME.kubeconfig
-    #clusterctl get kubeconfig $CLUSTER_NAME > $FL_KUBECONFIG
-    #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
+    clusterctl get kubeconfig $CLUSTER_NAME > $FL_KUBECONFIG
+    clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
     helm repo add cilium https://helm.cilium.io/ --force-update
     helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/test/integrations/cilium/values.yaml --dry-run > "${WORKDIR}/${CLUSTER_NAME}/cni.yaml"
-    #kubectl apply -f "${WORKDIR}/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${FL_KUBECONFIG}"
+    kubectl apply -f "${WORKDIR}/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${FL_KUBECONFIG}"
+
+    sleep 3
+
+    flux bootstrap github \
+        --owner="${GITHUB_USER}" \
+        --repository="${GITHUB_REPO}" \
+        --path="templates/gcp/v${VERSION}" \
+        --branch="${GITHUB_BRANCH}" \
+        --network-policy=false \
+        --personal=true \
+        --private=false \
+        --kubeconfig=${FL_KUBECONFIG}
 }
 
 function createAllWorkloads {

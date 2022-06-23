@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: base
-      version: 1.13.3
+      version: $(ISTIO_VERSION)
       sourceRef:
         kind: HelmRepository
         name: istio-charts
@@ -17,3 +17,6 @@ spec:
       interval: 10m
   install:
     createNamespace: true
+  valuesFrom:
+  - kind: ConfigMap
+    name: istio-base-config
