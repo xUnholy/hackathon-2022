@@ -36,12 +36,20 @@ export KUBECONFIG="${TMP}/kubeconfig"
 export KUBECTL="kubectl"
 export TALOSCTL="talosctl"
 export CILIUM_VERSION="1.11.5"
+export KUBECONFIG_VERSION="02"
+
+export CLUSTER_NAME="cluster-02"
+export GITHUB_USER="maheshrayas"
+export GITHUB_REPO="hackathon-2022"
+export GITHUB_BRANCH="master"
+export CLI_ARGS=""
 
 # Kubernetes
 
 export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.23.7}
 
-export NAME_PREFIX="cluster-00"
+export NAME_PREFIX="chaos-monkeys"
+export KUBECONFIG_VERSION="02"
 export TIMEOUT=1200
 export NUM_NODES=2
 export TEMPLATE_TYPE=test
@@ -100,13 +108,13 @@ function create_cluster_capi {
   # Wait for nodes to check in
 
   timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' --kubeconfig "${TMP}/kubeconfig-00" | grep ${NUM_NODES} >/dev/null; do
+  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' --kubeconfig "${TMP}/kubeconfig-${KUBECONFIG_VERSION}" | grep ${NUM_NODES} >/dev/null; do
     [[ $(date +%s) -gt $timeout ]] && exit 1
-    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-00" && :
+    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-${KUBECONFIG_VERSION}" && :
     sleep 10
   done
 
-  url=$(cat "${TMP}/kubeconfig-00" | yq '.clusters[].cluster.server')
+  url=$(cat "${TMP}/kubeconfig-${KUBECONFIG_VERSION}" | yq '.clusters[].cluster.server')
   foo=${url#"https://"}
   foo=${foo%":443"}
   echo "LB IP address : ${foo}"
@@ -115,15 +123,26 @@ function create_cluster_capi {
   #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
   helm repo add cilium https://helm.cilium.io/ --force-update
   helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/${TEMPLATE_TYPE}/integrations/cilium/values.yaml --set k8sServiceHost=${foo} --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
-  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-00"
+  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${TMP}/kubeconfig-${KUBECONFIG_VERSION}"
 
   # Wait for nodes to be ready
   timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes --kubeconfig "${TMP}/kubeconfig-00" > /dev/null; do
+  until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes --kubeconfig "${TMP}/kubeconfig-${KUBECONFIG_VERSION}" > /dev/null; do
     [[ $(date +%s) -gt $timeout ]] && exit 1
-    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-00" && :
+    ${KUBECTL} get nodes -o wide --kubeconfig "${TMP}/kubeconfig-${KUBECONFIG_VERSION}" && :
     sleep 10
   done
+
+  flux bootstrap github \
+        --owner="${GITHUB_USER}" \
+        --repository="${GITHUB_REPO}" \
+        --path="k8s/clusters/${CLUSTER_NAME}" \
+        --branch="${GITHUB_BRANCH}" \
+        --network-policy=false \
+        --personal=true \
+        --private=false \
+        --kubeconfig="${TMP}/kubeconfig-${KUBECONFIG_VERSION}" \
+        "${CLI_ARGS}"
 
   # Verify that we have an HA controlplane
   # timeout=$(($(date +%s) + ${TIMEOUT}))
@@ -135,33 +154,7 @@ function create_cluster_capi {
 }
 
 function pivot_cluster_capi {
-
-  CAPI_VERSION="${CAPI_VERSION:-1.1.4}"
-  CAPA_VERSION="${CAPA_VERSION:-1.4.1}"
-  CAPG_VERSION="${CAPG_VERSION:-1.1.0}"
-
-  # CABPT
-  CABPT_NS="cabpt-system"
-
-  clusterctl init \
-      --config hack/clusterctl.yaml \
-      --core "cluster-api:v${CAPI_VERSION}" \
-      --control-plane "talos" \
-      --infrastructure "gcp:v${CAPG_VERSION}"  \
-      --bootstrap "talos" \
-      --kubeconfig "${TMP}/kubeconfig-00"
-
-  gcloud auth activate-service-account --key-file "$(pwd)/.secrets/gcp-credentials-cluster-api.json"
-
-  # Wait for the talosconfig
-  timeout=$(($(date +%s) + ${TIMEOUT}))
-  until ${KUBECTL} wait --timeout=1s --for=condition=Ready -n ${CABPT_NS} pods --all; do
-    [[ $(date +%s) -gt $timeout ]] && exit 1
-    echo 'Waiting to CABPT pod to be available...'
-    sleep 5
-  done
-
-  clusterctl move --to-kubeconfig="${TMP}/kubeconfig-00"
+  clusterctl move --to-kubeconfig="${TMP}/kubeconfig"
 }
 
 function run_kubernetes_conformance_test {
@@ -185,8 +178,7 @@ function run_worker_cis_benchmark {
 }
 
 function get_kubeconfig {
-
-  clusterctl get kubeconfig cluster-00 > "${TMP}/kubeconfig-00"
+  clusterctl get kubeconfig ${CLUSTER_NAME} > "${TMP}/kubeconfig-${KUBECONFIG_VERSION}"
 }
 
 function dump_cluster_state {
