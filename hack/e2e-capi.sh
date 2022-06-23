@@ -18,11 +18,6 @@ failure() {
   clusterctl delete --all
 }
 
-# Env vars for cloud accounts
-set +x
-export GCP_B64ENCODED_CREDENTIALS=$( cat $(pwd)/.secrets/gcp-credentials-cluster-api.json | base64 | tr -d '\n' )
-set -x
-
 clusterctl init \
     --config hack/clusterctl.yaml \
     --core "cluster-api:v${CAPI_VERSION}" \

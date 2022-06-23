@@ -23,6 +23,10 @@ TMP="/tmp/e2e/${PLATFORM}"
 mkdir -p "${TMP}"
 cp ~/.kube/config "${TMP}/kubeconfig"
 
+# Env vars for cloud accounts
+set +x
+export GCP_B64ENCODED_CREDENTIALS=$( cat $(pwd)/.secrets/gcp-credentials-cluster-api.json | base64 | tr -d '\n' )
+set -x
 
 # Talos
 
@@ -40,7 +44,7 @@ export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.24.1}
 export NAME_PREFIX="cluster-00"
 export TIMEOUT=1200
 export NUM_NODES=2
-export TEMPLATE_TYPE=standard
+export TEMPLATE_TYPE=test
 
 # default values, overridden by talosctl cluster create tests
 PROVISIONER=
@@ -93,26 +97,27 @@ function create_cluster_capi {
     sleep 10
   done
 
-  mkdir -p "k8s/clusters/${CLUSTER_NAME}"
-  #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
-  helm repo add cilium https://helm.cilium.io/ --force-update
-  helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/test/integrations/cilium/values.yaml --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
-  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${KUBECONFIG}"
-
   # url=$(cat "${TMP}/kubeconfig" | yq '.clusters[].cluster.server')
   # foo=${url#"https://"}
   # foo=${foo%":443"}
   # echo "LB IP address : ${foo}"
 
   # Wait for nodes to check in
-  # TODO: This will work only when CNI as deployed to cluster
-  # timeout=$(($(date +%s) + ${TIMEOUT}))
-  # until ${KUBECTL} get nodes -o go-template='{{ len .items }}' | grep ${NUM_NODES} >/dev/null; do
-  #   [[ $(date +%s) -gt $timeout ]] && exit 1
-  #   ${KUBECTL} get nodes -o wide && :
-  #   sleep 10
-  # done
+  
+  timeout=$(($(date +%s) + ${TIMEOUT}))
+  until ${KUBECTL} get nodes -o go-template='{{ len .items }}' | grep ${NUM_NODES} >/dev/null; do
+    [[ $(date +%s) -gt $timeout ]] && exit 1
+    ${KUBECTL} get nodes -o wide && :
+    sleep 10
+  done
 
+  mkdir -p "k8s/clusters/${CLUSTER_NAME}"
+  #clusterctl generate cluster "${CLUSTER_NAME}" --from templates/gcp/standard/template.yaml > "k8s/clusters/${CLUSTER_NAME}/cluster.yaml"
+  helm repo add cilium https://helm.cilium.io/ --force-update
+  helm template cilium cilium/cilium --version "${CILIUM_VERSION}" --namespace=kube-system --values=templates/gcp/test/integrations/cilium/values.yaml --dry-run > "k8s/clusters/${CLUSTER_NAME}/cni.yaml"
+  kubectl apply -f "k8s/clusters/${CLUSTER_NAME}/cni.yaml" --kubeconfig "${KUBECONFIG}"
+
+  # TODO: This will work only when CNI as deployed to cluster
   # Wait for nodes to be ready
   # timeout=$(($(date +%s) + ${TIMEOUT}))
   # until ${KUBECTL} wait --timeout=1s --for=condition=ready=true --all nodes > /dev/null; do

@@ -18,7 +18,7 @@ function setup {
   export GCP_PROJECT=rising-capsule-353505
   export GCP_REGION=us-central1
   export GCP_NETWORK=default
-  export GCP_VM_SVC_ACCOUNT=cluster-api@rising-capsule-353505.iam.gserviceaccount.com
+  export GCP_VM_SVC_ACCOUNT=cluster-api@${GCP_PROJECT}.iam.gserviceaccount.com
 
 
   ## Control plane vars
