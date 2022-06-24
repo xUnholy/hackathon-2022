@@ -33,15 +33,12 @@ spec:
     - name: network-system-cert-manager-issuers
       namespace: flux-system
   patches:
-    - patch: |-
-        apiVersion: apps/v1
+    - patch: |
+        - op: replace
+          path: /spec/template/spec/container/0
+          value:
+            image: zolinz/api-1-amd64:10
+      target:
         kind: Deployment
-        metadata:
-          name: monkey
-          namespace: monkey
-        spec:
-          template:
-            spec:
-              containers:
-                - name: monkey
-                  image: zolinz/api-1-amd64:10
+        name: monkey
+        namespace: monkey
