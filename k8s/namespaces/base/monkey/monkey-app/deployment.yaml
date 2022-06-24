@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: monkey
-          image: zolinz/api-1-amd64:9
+          image: zolinz/api-1-amd64:10
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
