@@ -6,17 +6,9 @@ metadata:
 spec:
   acme:
     server: https://acme-staging-v02.api.letsencrypt.org/directory
-    email: hackathon.2022.1@gmail.com
+    email: dns01-solver@rising-capsule-353505.iam.gserviceaccount.com
     privateKeySecretRef:
       name: letsencrypt-staging
-    solvers:
-      - dns01:
-          cloudflare:
-            email: michaelfornaro@gmail.com
-            apiTokenSecretRef:
-              name: cloudflare-cert-manager-token
-              key: api-token
-
     solvers:
     - dns01:
         cloudDNS:

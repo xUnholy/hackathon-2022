@@ -6,13 +6,15 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: hackathon.2022.1@gmail.com
+    email: dns01-solver@rising-capsule-353505.iam.gserviceaccount.com
     privateKeySecretRef:
       name: letsencrypt-prod
     solvers:
-      - dns01:
-          cloudflare:
-            email: michaelfornaro@gmail.com
-            apiTokenSecretRef:
-              name: cloudflare-cert-manager-token
-              key: api-token
+    - dns01:
+        cloudDNS:
+          # The ID of the GCP project
+          project: rising-capsule-353505
+          # This is the secret used to access the service account
+          serviceAccountSecretRef:
+            name: clouddns-dns01-solver-svc-acct
+            key: key.json
