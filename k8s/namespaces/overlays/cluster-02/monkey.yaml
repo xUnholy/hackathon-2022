@@ -42,5 +42,6 @@ spec:
   #       kind: Deployment
   #       name: monkey
   #       namespace: monkey
-  images: monkey
-  newTag: 10
+  images:
+  - name: monkey
+    newTag: 10
