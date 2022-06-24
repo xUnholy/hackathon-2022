@@ -32,13 +32,15 @@ spec:
       namespace: flux-system
     - name: network-system-cert-manager-issuers
       namespace: flux-system
-  patches:
-    - patch: |
-        - op: replace
-          path: /spec/template/spec/container/0
-          value:
-            image: zolinz/api-1-amd64:10
-      target:
-        kind: Deployment
-        name: monkey
-        namespace: monkey
+  # patches:
+  #   - patch: |
+  #       - op: replace
+  #         path: /spec/template/spec/container/0
+  #         value:
+  #           image: zolinz/api-1-amd64:10
+  #     target:
+  #       kind: Deployment
+  #       name: monkey
+  #       namespace: monkey
+  images: monkey
+  newTag: 10
