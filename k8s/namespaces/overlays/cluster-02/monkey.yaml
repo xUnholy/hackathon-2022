@@ -43,5 +43,5 @@ spec:
   #       name: monkey
   #       namespace: monkey
   images:
-  - name: monkey
+  - name: "zolinz/api-1-amd64"
     newTag: "10"
