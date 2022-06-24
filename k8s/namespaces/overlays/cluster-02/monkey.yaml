@@ -38,6 +38,7 @@ spec:
         kind: Deployment
         metadata:
           name: monkey
+          namespace: monkey
         spec:
           template:
             spec:
