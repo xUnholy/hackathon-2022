@@ -4,4 +4,3 @@ namespace: network-system
 resources:
   - helmrelease.yaml
   # - secret.enc.yaml
-  - clusterissuers
