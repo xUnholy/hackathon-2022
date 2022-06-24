@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-base-config
+immutable: true
+data:
+  values.yaml: |
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-cni-config
+immutable: true
+data:
+  values.yaml: |
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istiod-config
+immutable: true
+data:
+  values.yaml: |
+  meshConfig:
+      accessLogFile: /dev/stdout
+      trustDomain: cluster.local
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istiod-config
+immutable: true
+data:
+  values.yaml: |
+  service:
+    type: NodePort
+    ports:
+      - name: status-port
+        port: 15021
+        protocol: TCP
+        targetPort: 15021
+      - name: http2
+        port: 80
+        protocol: TCP
+        targetPort: 80
+        nodePort: 30080
+      - name: https
+        port: 443
+        protocol: TCP
+        targetPort: 443

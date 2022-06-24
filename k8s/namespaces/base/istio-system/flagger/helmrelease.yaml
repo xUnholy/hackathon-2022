@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: flagger
-      version: 1.21.0
+      version: $(FLAGGER_VERSION)
       sourceRef:
         kind: HelmRepository
         name: flagger-charts
@@ -29,5 +29,6 @@ spec:
     timeout: 10m
     recreate: true
     cleanupOnFail: true
-  values:
-    meshProvider: istio
+  valuesFrom:
+  - kind: ConfigMap
+    name: flagger-config
