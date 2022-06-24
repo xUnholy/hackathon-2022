@@ -44,4 +44,4 @@ spec:
   #       namespace: monkey
   images:
   - name: monkey
-    newTag: 10
+    newTag: "10"
