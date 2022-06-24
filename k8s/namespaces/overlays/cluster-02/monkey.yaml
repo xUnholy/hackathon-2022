@@ -30,6 +30,8 @@ spec:
   dependsOn:
     - name: monkey-namespace
       namespace: flux-system
+    - name: network-system-cert-manager-issuers
+      namespace: flux-system
   patches:
     - patch: |-
         apiVersion: apps/v1
