@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: monkey
 resources:
   # - canary.yaml
+  - certificate.yaml
   - deployment.yaml
   - ingress.yaml
   - service.yaml

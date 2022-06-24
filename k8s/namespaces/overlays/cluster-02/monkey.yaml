@@ -32,19 +32,30 @@ spec:
       namespace: flux-system
   patches:
     - patch: |-
-        apiVersion: networking.k8s.io/v1
-        kind: Ingress
+        apiVersion: apps/v1
+        kind: Deployment
         metadata:
-          name: monkey-app
+          name: monkey
         spec:
-          rules:
-            - host: test.chaosmonkeys.net
-              http:
-                paths:
-                  - path: /
-                    pathType: Prefix
-                    backend:
-                      service:
-                        name: monkey
-                        port:
-                          number: 7777
+          template:
+            spec:
+              containers:
+                - name: monkey
+                  image: zolinz/api-1-amd64:10
+  #   - patch: |-
+  #       apiVersion: networking.k8s.io/v1
+  #       kind: Ingress
+  #       metadata:
+  #         name: monkey-app
+  #       spec:
+  #         rules:
+  #           - host: test.chaosmonkeys.net
+  #             http:
+  #               paths:
+  #                 - path: /
+  #                   pathType: Prefix
+  #                   backend:
+  #                     service:
+  #                       name: monkey
+  #                       port:
+  #                         number: 7777

@@ -8,7 +8,7 @@ metadata:
     # cert-manager.io/cluster-issuer: 'letsencrypt-prod'
 spec:
   rules:
-    - host: app.chaosmonkeys.net
+    - host: '*.chaosmonkeys.net'
       http:
         paths:
           - path: /

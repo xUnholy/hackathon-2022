@@ -1,0 +1,29 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: monkey-gateway
+spec:
+  selector:
+    app: istio-gateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - 'chaosmonkeys.net'
+        - '*.chaosmonkeys.net'
+      tls:
+        httpsRedirect: true
+    # - port:
+    #     number: 443
+    #     name: https
+    #     protocol: HTTPS
+    #   hosts:
+    #     - 'chaosmonkeys.net'
+    #     - '*.chaosmonkeys.net'
+    #   tls:
+    #     credentialName: chaosmonkeys-net-le
+    #     mode: SIMPLE
+    #     minProtocolVersion: TLSV1_2
+    #     maxProtocolVersion: TLSV1_3

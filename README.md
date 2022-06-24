@@ -79,6 +79,10 @@ Default enabled in 1.23.x
 
 https://kubernetes.io/docs/concepts/security/pod-security-admission/#pod-security-levels
 
+### Cilium + Istio CNI + Talos
+
+https://github.com/istio/istio/issues/38794
+
 ## Stretch Goals
 
 Creating multi-regional clusters.
