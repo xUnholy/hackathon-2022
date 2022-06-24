@@ -2,6 +2,8 @@
 
 set -eou pipefail
 
+export PLATFORM=gcp
+
 source ./hack/e2e.sh
 
 function setup {
@@ -35,11 +37,11 @@ function setup {
 
   clusterctl generate cluster ${CLUSTER_NAME} \
     --kubeconfig ${KUBECONFIG} \
-    --from templates/gcp/test/template.yaml > ${TMP}/cluster.yaml
+    --from templates/gcp/${TEMPLATE_TYPE}/template.yaml > ${TMP}/cluster.yaml
 
   kubectl apply -f ${TMP}/cluster.yaml
 }
 
 setup
-create_cluster_capi gcp
+create_cluster_generic gcp
 # pivot_cluster_capi gcp

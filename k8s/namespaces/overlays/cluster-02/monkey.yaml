@@ -32,3 +32,15 @@ spec:
       namespace: flux-system
     - name: network-system-cert-manager-issuers
       namespace: flux-system
+  patches:
+    - patch: |-
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: monkey
+        spec:
+          template:
+            spec:
+              containers:
+                - name: monkey
+                  image: zolinz/api-1-amd64:10

@@ -37,7 +37,6 @@ export KUBECTL="kubectl"
 export TALOSCTL="talosctl"
 export CILIUM_VERSION="1.11.5"
 
-export CLUSTER_NAME="cluster-00"
 export GITHUB_USER="xunholy"
 export GITHUB_REPO="hackathon-2022"
 export GITHUB_BRANCH="master"
@@ -47,16 +46,21 @@ export CLI_ARGS=""
 
 export KUBERNETES_VERSION=${KUBERNETES_VERSION:-1.23.7}
 
-export CLUSTER_NAME_PREFIX="cluster"
-export CLUSTER_NAME_SUFFIX="00"
+export CLUSTER_NAME_PREFIX="${CLUSTER_NAME_PREFIX:-cluster}"
+export CLUSTER_NAME_SUFFIX="${CLUSTER_NAME_SUFFIX:-00}"
+ export CLUSTER_NAME="${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX}"
 export TIMEOUT=1200
 export NUM_NODES=2
-export TEMPLATE_TYPE=test
+export TEMPLATE_TYPE=standard
 
 # TODO make a create_cluster_capi vs a non-capi cluster; This latter func just needs to template and commit the cluster.yaml to a flux managed dir
 
+# function create_cluster_capi {
+
+# }
+
 # Create a cluster via CAPI.
-function create_cluster_capi {
+function create_cluster_generic {
   # Wait for first controlplane machine to have a name
   timeout=$(($(date +%s) + ${TIMEOUT}))
   until [ -n "$(${KUBECTL} --kubeconfig ${KUBECONFIG} get machine -l cluster.x-k8s.io/control-plane,cluster.x-k8s.io/cluster-name=${CLUSTER_NAME_PREFIX}-${CLUSTER_NAME_SUFFIX} --all-namespaces -o json | jq -re '.items[0].metadata.name | select (.!=null)')" ]; do
@@ -184,4 +188,3 @@ function dump_cluster_state {
   ${KUBECTL} get nodes -o wide
   ${KUBECTL} get pods --all-namespaces -o wide
 }
-

@@ -57,9 +57,7 @@ spec:
         - op: replace
           path: /cluster/network/cni
           value:
-            name: custom
-            urls:
-              - https://raw.githubusercontent.com/xunholy/cluster-api/master/k8s/clusters/${CLUSTER_NAME}/cni.yaml
+            name: none
 ---
 kind: GCPMachineTemplate
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
@@ -70,7 +68,7 @@ spec:
     spec:
       instanceType: ${GCP_CONTROL_PLANE_MACHINE_TYPE}
       image: ${GCP_CONTROL_PLANE_IMAGE_ID}
-      publicIP: false
+      publicIP: true
       rootDeviceSize: ${GCP_CONTROL_PLANE_VOL_SIZE}
       serviceAccounts:
         email: ${GCP_VM_SVC_ACCOUNT}
@@ -87,12 +85,6 @@ metadata:
     nodepool: nodepool-a
   name: ${CLUSTER_NAME}-workers
 spec:
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 50%
-      maxSurge: 10%
-      deletePolicy: Oldest
   clusterName: ${CLUSTER_NAME}
   replicas: ${WORKER_MACHINE_COUNT}
   selector:
@@ -117,7 +109,7 @@ spec:
         name: ${CLUSTER_NAME}-workers
         apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
         kind: GCPMachineTemplate
-  revisionHistoryLimit: 3
+  revisionHistoryLimit: 1
 ---
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
 kind: GCPMachineTemplate
@@ -146,23 +138,3 @@ spec:
     spec:
       generateType: join
       talosVersion: ${TALOS_VERSION}
----
-## Health check for workers - https://pkg.go.dev/sigs.k8s.io/cluster-api@v1.1.4/api/v1beta1#MachineHealthCheckSpec
-apiVersion: cluster.x-k8s.io/v1alpha4
-kind: MachineHealthCheck
-metadata:
-  name: ${CLUSTER_NAME}-worker-hc
-spec:
-  clusterName: ${CLUSTER_NAME}
-  maxUnhealthy: 40%
-  nodeStartupTimeout: 20m
-  selector:
-    matchLabels:
-      nodepool: nodepool-a
-  unhealthyConditions:
-    - type: Ready
-      status: Unknown
-      timeout: 300s
-    - type: Ready
-      status: "False"
-      timeout: 300s
